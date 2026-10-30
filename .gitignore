@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# vendor SDK downloads (Baumer neoAPI)
+downloads/
+downloads - Copy/
+
+# raw network capture used once to find the Hydra's IP
+cap.etl
+cap.txt
+find_result.txt
+
+# local / per-run output
+.claude/settings.local.json
+gui_log.txt
+snapshot_*.png
+live_*.mp4
