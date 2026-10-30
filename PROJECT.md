@@ -165,6 +165,8 @@ Run everything with `C:\dev\hydra\.venv\Scripts\python`.
 
 ## Next session
 
+0. Push the local git repo (`main`, first commit `f435af3`) to a new GitHub repository.
+   Check the git identity first (repo-local: name `wysmo`, email wysmolek@gmail.com).
 1. Start: Hydra power-cycled? -> GUI **Home all Hydra** (or `python hydra.py 172.20.5.201 --home`).
    Camera power-cycled? -> `python gige_forceip.py 00:06:BE:11:70:BA 172.20.5.20`.
    Then `C:\dev\hydra\.venv\Scripts\python C:\dev\hydra\gui.py`, **Calibrate**.
