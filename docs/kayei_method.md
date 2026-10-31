@@ -264,12 +264,77 @@ Two things were learned on the way, both visible only in the per-frame logs:
   decaying by 30 % per turn). Letting the axes settle before the rotation starts and
   enabling the table only after one full turn removed it.
 
-### 7.3 Next steps
+### 7.3 Full comparison: as is / live align / kayEi, 20-360 deg/s, without and with scan
+
+`kayei_sweep.py` (2026-10-31 17:10-17:25, 30 runs, 25-45 s each, same fiber, same light;
+kayEi model learned once at both scan ends, residual table and trim reset per run;
+scan 5-45 mm at 1 mm/s). Errors from the per-frame logs after the first full turn and the
+first 2 s (`kayei_eval.py "20261031_17[12]"`):
+
+![comparison](figures/kayei_comparison.png)
+
+| Mode | Rotation | Scan | Turns evaluated | Angle rms / max [deg] | Offset rms / max [um] |
+|---|---|---|---|---|---|
+| as is | 20 deg/s | no | 2 | 0.2859 / 0.420 | 209.2 / 340 |
+| live align | 20 deg/s | no | 3 | 0.0197 / 0.042 | 6.9 / 23 |
+| kayEi | 20 deg/s | no | 2 | 0.0067 / 0.022 | 8.0 / 30 |
+| as is | 20 deg/s | yes | 3 | 0.4513 / 0.710 | 263.3 / 457 |
+| live align | 20 deg/s | yes | 2 | 0.0232 / 0.052 | 9.4 / 31 |
+| kayEi | 20 deg/s | yes | 3 | 0.0095 / 0.044 | 12.7 / 61 |
+| as is | 50 deg/s | no | 4 | 0.3269 / 0.567 | 191.5 / 334 |
+| live align | 50 deg/s | no | 4 | 0.0440 / 0.085 | 10.0 / 35 |
+| kayEi | 50 deg/s | no | 4 | 0.0069 / 0.025 | 9.1 / 29 |
+| as is | 50 deg/s | yes | 4 | 0.3248 / 0.554 | 158.7 / 283 |
+| live align | 50 deg/s | yes | 4 | 0.0500 / 0.103 | 12.7 / 53 |
+| kayEi | 50 deg/s | yes | 4 | 0.0092 / 0.068 | 10.7 / 61 |
+| as is | 100 deg/s | no | 6 | 0.2058 / 0.286 | 123.4 / 208 |
+| live align | 100 deg/s | no | 6 | 0.0811 / 0.159 | 14.8 / 50 |
+| kayEi | 100 deg/s | no | 7 | 0.0091 / 0.041 | 12.2 / 70 |
+| as is | 100 deg/s | yes | 7 | 0.2906 / 0.491 | 171.4 / 291 |
+| live align | 100 deg/s | yes | 6 | 0.0990 / 0.187 | 21.3 / 73 |
+| kayEi | 100 deg/s | yes | 7 | 0.0107 / 0.051 | 12.4 / 72 |
+| as is | 200 deg/s | no | 13 | 0.2283 / 0.384 | 116.0 / 174 |
+| live align | 200 deg/s | no | 13 | 0.1543 / 0.268 | 27.7 / 77 |
+| kayEi | 200 deg/s | no | 14 | 0.0089 / 0.041 | 11.6 / 42 |
+| as is | 200 deg/s | yes | 13 | 0.3039 / 0.499 | 181.2 / 298 |
+| live align | 200 deg/s | yes | 13 | 0.1920 / 0.346 | 41.2 / 141 |
+| kayEi | 200 deg/s | yes | 13 | 0.0100 / 0.035 | 12.5 / 45 |
+| as is | 360 deg/s | no | 25 | 0.2999 / 0.502 | 153.8 / 264 |
+| live align | 360 deg/s | no | 23 | 0.2363 / 0.378 | 66.3 / 228 |
+| kayEi | 360 deg/s | no | 24 | 0.0139 / 0.073 | 20.9 / 79 |
+| as is | 360 deg/s | yes | 24 | 0.2197 / 0.369 | 111.8 / 160 |
+| live align | 360 deg/s | yes | 17 | 0.2742 / 0.477 | 474.3 / 2982 |
+| kayEi | 360 deg/s | yes | 24 | 0.0158 / 0.059 | 22.1 / 79 |
+
+Reading the table:
+
+- **Feedback (live align) is a function of speed; kayEi is not.** Feedback goes from
+  0.020 deg / 7 um at 20 deg/s to 0.24 deg / 66 um at 360 deg/s - at 100 deg/s and
+  above it no longer meets the step-by-step tolerance (0.02 deg / 20 um), and at
+  360 deg/s with scanning it diverged (Z driven to its 25 mm limit, run aborted by the
+  range check). kayEi stays at **0.007-0.016 deg** and **8-22 um** over the whole range;
+  the angle is within tolerance everywhere, the offset up to 200 deg/s and marginal
+  (21-22 um) at 360 deg/s.
+- **Scanning costs kayEi almost nothing** (angle +0.001 to +0.003 deg, offset +0 to
+  +5 um), because the model is linear in the scan position and the goniometer lever arm
+  is part of it. For feedback the scan adds 20-50 %.
+- **Where kayEi's remaining error comes from.** At 20-50 deg/s the angle error (0.007 deg)
+  equals the sine model's own residual (6.2); the offset error (8-9 um = 0.4 px) is
+  about 4x the measurement noise and 2x the model residual. The slow rise towards
+  360 deg/s (0.014 deg, 21 um) matches the lead law being tuned at 100-200 deg/s only
+  (7.2: best lead grows with the required axis rate) and the 50 Hz command stream
+  (7.2 deg of rotation per command at 360 deg/s).
+- The as-is rows are the disturbance itself: 0.2-0.45 deg and 110-260 um rms,
+  independent of speed as it should be. Their scatter (the fiber was re-chucked / touched
+  at least once during the day, amplitude 0.44 -> 0.51 deg) is why every mode is compared
+  within the same sweep only.
+
+### 7.4 Next steps
 
 1. ~~Z and scan axes in the same scheme~~ done (7.2b).
 2. ~~Residual table and trim~~ on; the table now holds +/-0.02 deg / +/-40 um of shape.
 3. Full-system evaluation: as is / live align / kayEi at 20, 50, 100, 200, 360 deg/s,
-   with and without scanning (`kayei_sweep.py`, `kayei_eval.py`) - running, see 7.4.
+   with and without scanning - done, 7.3.
 4. ~~Learn at two scan positions~~ done, including the lever-arm calibration at both.
 5. Open physics: the out-of-plane components (e_y, t_y) are the focus variation. No axis
    corrects them in this setup; they can at least be predicted from the same model.
@@ -289,6 +354,7 @@ Two things were learned on the way, both visible only in the per-frame logs:
 | 2026-10-31 | goniometer stream tests | `kayei_data/mech_test.py` | 25-84 ms lag, full amplitude |
 | 2026-10-31 | Z dynamics (step, sine stream) | `kayei_data/z_dyn.py` | 58 ms response, 60-68 ms sine lag |
 | 2026-10-31 | kayEi full system at 100 deg/s | `kayei_data/run_20261031_17*.csv` | 0.0078 deg / 7.4 um with scan |
+| 2026-10-31 | full comparison sweep, 30 runs | `kayei_sweep.py`, `kayei_data/run_20261031_17[12]*.csv`, `sweep_20261031.log` | kayEi 0.007-0.016 deg / 8-22 um at 20-360 deg/s; feedback 0.020 -> 0.24 deg |
 | 2026-10-31 | kayEi goniometer lead sweep | `kayei_data/tracker_test.py`, `kayei_data/gonio_tracker.csv` | 0.013-0.017 deg at 200-360 deg/s |
 
 ## 9. Reproducing

@@ -9,6 +9,7 @@ import sys
 
 import matplotlib
 matplotlib.use("Agg")
+import matplotlib.ticker
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -31,9 +32,11 @@ def evaluate(path):
     t, th, a, x, turns = load(path)
     m = re.search(r"run_(\d{8}_\d{6})_(\w+?)_(\d+)dps(_scan)?\.csv", os.path.basename(path))
     stamp, mode, speed, scan = m.group(1), m.group(2), int(m.group(3)), bool(m.group(4))
-    ev = turns >= 1
+    # evaluate after the first full turn AND after the first 2 s (start transients: axes
+    # travelling to the reference, residual table not yet learning)
+    ev = (turns >= 1) & (t - t[0] > 2.0)
     if ev.sum() < 20:
-        ev = np.ones_like(turns, bool)   # run too short for a full turn: use everything
+        ev = np.ones_like(turns, bool)   # run too short: use everything
     return dict(stamp=stamp, mode=mode, speed=speed, scan=scan, n=int(ev.sum()), turns=int(turns[-1]),
                 duration=float(t[-1] - t[0]),
                 a_rms=float(np.sqrt(np.mean(a[ev] ** 2))), a_max=float(np.abs(a[ev]).max()),
@@ -42,7 +45,7 @@ def evaluate(path):
 
 def main():
     prefix = sys.argv[1] if len(sys.argv) > 1 else ""
-    files = sorted(glob.glob(os.path.join(HERE, "kayei_data", f"run_{prefix}*.csv")))
+    files = sorted(glob.glob(os.path.join(HERE, "kayei_data", f"run_{prefix}*.csv")))  # prefix may contain glob chars
     res = [evaluate(f) for f in files]
     names = {"as": "as is", "live": "live align", "kayei": "kayEi"}
     print("| Mode | Rotation | Scan | Turns evaluated | Angle rms / max [deg] | Offset rms / max [um] |")
@@ -64,6 +67,7 @@ def main():
         ax.axhline(tol, color="gray", ls=":", lw=1, label="step-by-step tolerance")
         ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlabel("rotation speed [deg/s]"); ax.set_ylabel(yl)
         ax.set_xticks([20, 50, 100, 200, 360]); ax.set_xticklabels(["20", "50", "100", "200", "360"])
+        ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
         ax.grid(alpha=0.3, which="both"); ax.legend(fontsize=8)
     axs[0].set_title("Error after the first turn, all three LIVE modes")
     fig.tight_layout()

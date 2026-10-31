@@ -520,6 +520,9 @@ class Worker(threading.Thread):
             clk.w = 0.0
             tr.start()
             time.sleep(0.6)
+            t_wait = time.time()
+            while not (rig.z.qONT()["1"] and not h.is_moving(fa.GONIO)) and time.time() - t_wait < 5:
+                time.sleep(0.1)       # Z may have a long way to go after a previous run
             clk.w = rot_speed
             clk.sync(h.position(fa.ROT))
             h.set_velocity(fa.ROT, rot_speed)
