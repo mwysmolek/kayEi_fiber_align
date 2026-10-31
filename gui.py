@@ -18,6 +18,7 @@ from PIL import Image, ImageTk
 from pipython import GCSDevice, pitools
 
 import fiber_align as fa
+import kayei
 from hydra import Hydra
 
 SCAN_SN = "0165500183"
@@ -26,6 +27,8 @@ CHART_H = 64                 # height of each live chart strip
 CHART_S = 30.0               # seconds shown in the charts
 REC_FPS = 20                 # recorded movie runs in real time at this frame rate
 LOG_FILE = __file__.rsplit("\\", 1)[0] + "\\gui_log.txt"
+DATA_DIR = __file__.rsplit("\\", 1)[0] + "\\kayei_data"
+LEARN_SPEED = 90.0          # deg/s for the kayEi learning turns
 START_EXPOSURE_MS = 20.0     # >= 10 ms needed for clean fiber edges (dim rims at shorter exposure)
 TRACK_MAX_FIT_RMS = 1.5      # px; frames with a worse straight-line fit are not used for steering
 TRACK_GAIN = 0.6             # fraction of the measured error corrected per frame (live mode)
@@ -91,6 +94,9 @@ class Worker(threading.Thread):
         self.hist = collections.deque(maxlen=4000)  # (t, angle, x_px, gonio, z)
         self.rig, self.cal, self.auto, self.exp_ms = None, None, False, 0.0
         self.live_pos = None  # set by do_live: positions from commands instead of slow queries
+        self.kayei = None     # kayei.Predictor once learned
+        self.kayei_ilc = True
+        self.run_rows = []    # per-frame log of the current live run
         self.fps, self.t_last, self.t_pos = 0.0, time.time(), 0.0
 
     # --- called from the GUI thread ---
@@ -293,7 +299,9 @@ class Worker(threading.Thread):
         self.rig.hydra_to(fa.ROT, 0.0)
         self.log("sequence done, rotation back at 0")
 
-    def do_live(self, rot_speed, scan=None, compensate=True):
+    def do_live(self, rot_speed, scan=None, compensate=True, mode_name=None):
+        if mode_name == "kayei":
+            return self.do_kayei(rot_speed, scan)
         """Rotation turns continuously, scan sweeps lo<->hi; every fresh frame the goniometer
         removes the fiber angle and Z the offset (proportional, dead band, no waiting).
         compensate=False: align once, then only rotate + scan and watch the fiber wander."""
@@ -311,7 +319,9 @@ class Worker(threading.Thread):
         p = rig.positions()
         g_cmd, z_cmd = p["goniometer"], p["z"]
         self.set_mode(mode=mode)
+        self.run_rows = []
         try:
+            h.rezero_turn(fa.ROT); time.sleep(0.1)
             h.set_velocity(fa.ROT, rot_speed)
             h.move_abs(fa.ROT, AXES["rotation"][3])  # far away: keeps turning until stopped
             if scan:
@@ -338,6 +348,7 @@ class Worker(threading.Thread):
                 m = fa.measure(f)
                 self.publish(f, m)
                 n += 1
+                self.run_rows.append((now, p["rotation"] % 360, p["scan"], m["angle"] if m else "", m["x"] if m else "", g_cmd, z_cmd))
                 if not compensate:
                     continue  # just watch (fiber may even leave the image)
                 if m is None or m["rms"] > TRACK_MAX_FIT_RMS:
@@ -375,13 +386,167 @@ class Worker(threading.Thread):
             dt = time.time() - t0
             self.log(f"{mode} ended after {dt:.1f} s, {n} frames ({n / max(dt, 1e-3):.1f}/s), "
                      f"rotation at {h.position(fa.ROT):.1f} deg")
-            with self.lock:
-                run = [r for r in self.hist if r[0] >= t_start]
-            if run:
-                a = np.array([r[1] for r in run])
-                x = np.array([r[2] for r in run]) * 1000 / abs(x_z)
-                self.log(f"{mode} errors: angle rms {np.sqrt(np.mean(a ** 2)):.4f} max {np.abs(a).max():.4f} deg | "
-                         f"offset rms {np.sqrt(np.mean(x ** 2)):.1f} max {np.abs(x).max():.1f} um")
+
+            self.summarize_run(mode, t_start, x_z, rot_speed, scan)
+
+    def summarize_run(self, mode, t_start, x_z, rot_speed, scan):
+        with self.lock:
+            run = [r for r in self.hist if r[0] >= t_start]
+        if run:
+            a = np.array([r[1] for r in run])
+            x = np.array([r[2] for r in run]) * 1000 / abs(x_z)
+            self.log(f"{mode} errors: angle rms {np.sqrt(np.mean(a ** 2)):.4f} max {np.abs(a).max():.4f} deg | "
+                     f"offset rms {np.sqrt(np.mean(x ** 2)):.1f} max {np.abs(x).max():.1f} um")
+        if self.run_rows:
+            import csv, os
+            os.makedirs(DATA_DIR, exist_ok=True)
+            tag = mode.split()[0].lower().replace("(", "")
+            path = os.path.join(DATA_DIR, time.strftime(f"run_%Y%m%d_%H%M%S_{tag}_{rot_speed:.0f}dps{'_scan' if scan else ''}.csv"))
+            with open(path, "w", newline="") as fh:
+                w = csv.writer(fh)
+                w.writerow(["t", "theta_deg", "scan_mm", "angle_deg", "x_px", "g_cmd_deg", "z_cmd_mm"])
+                w.writerows(self.run_rows)
+            self.log(f"run logged: {os.path.basename(path)} ({len(self.run_rows)} frames)")
+            self.run_rows = []
+
+    # ---------------------------------------------------------------- kayEi
+    def learn_turns(self, clk_speed, n_turns, s):
+        """n full turns with goniometer and Z fixed; returns (theta, scan, angle, x) samples
+        (theta absolute mod 360 - rezero_turn keeps the count consistent with the encoder index)"""
+        rig, h = self.rig, self.rig.h
+        h.rezero_turn(fa.ROT); time.sleep(0.1)
+        clk = kayei.RotClock(clk_speed)
+        th0 = h.position(fa.ROT); clk.sync(th0)
+        v0 = h.velocity(fa.ROT); h.set_velocity(fa.ROT, clk_speed)
+        h.move_abs(fa.ROT, th0 + 360 * n_turns + 30)
+        out, t_sync, t_start = [], time.time(), time.time()
+        try:
+            while True:
+                f = rig.grab1(fresh=True)
+                now = time.time()
+                if f is None:
+                    continue
+                if now - t_sync > 0.25:
+                    tq = time.time(); thq = h.position(fa.ROT); clk.sync(thq, (tq + time.time()) / 2); t_sync = time.time()
+                    if thq - th0 < 10 and now - t_start > 2.0:
+                        raise RuntimeError(f"rotation not moving (Hydra error {h.query('ge')})")
+                    self.check_drives()
+                if self.abort.is_set():
+                    raise Aborted
+                th_f = clk.at(now - kayei.FRAME_DELAY)
+                m = fa.measure(f)
+                self.live_pos = {"rotation": th_f, "goniometer": self._g_fixed, "z": self._z_fixed, "scan": s}
+                self.publish(f, m)
+                if m and m["rms"] <= TRACK_MAX_FIT_RMS:
+                    out.append((th_f % 360, s, m["angle"], m["x"]))
+                if th_f - th0 >= 360 * n_turns:
+                    break
+        finally:
+            h.stop(fa.ROT); time.sleep(0.3); h.set_velocity(fa.ROT, v0)
+            self.live_pos = None
+        return out
+
+    def do_kayei_learn(self, scan=None):
+        """Calibrate + align at the current scan position, then 2 learning turns there (and at the
+        other end of the scan range if scanning), fit the wobble model, build the predictor."""
+        rig = self.rig
+        self.do_calibrate()
+        cal0 = dict(self.cal)
+        self.do_align()
+        p = rig.positions()
+        g_al, z_al, s0 = p["goniometer"], p["z"], p["scan"]
+        self._g_fixed, self._z_fixed = g_al, z_al
+        self.log(f"kayEi learn: reference gonio {g_al:+.4f} z {z_al:.4f} at scan {s0:.2f}; 2 turns at {LEARN_SPEED:.0f} deg/s")
+        samples = self.learn_turns(LEARN_SPEED, 2, s0)
+        x_per_g_at = {s0: cal0["x_per_g"]}
+        a_g, x_z = [cal0["a_per_g"]], [cal0["x_per_z"]]
+        if scan:
+            lo, hi, v = scan
+            s1 = hi if abs(hi - s0) > abs(lo - s0) else lo
+            self.log(f"kayEi learn: scan -> {s1:.2f} mm, calibrate + 2 turns there")
+            rig.scan_to(s1)
+            self.do_calibrate()
+            x_per_g_at[s1] = self.cal["x_per_g"]; a_g.append(self.cal["a_per_g"]); x_z.append(self.cal["x_per_z"])
+            rig.hydra_to(fa.GONIO, g_al); rig.z_to(z_al)
+            samples += self.learn_turns(LEARN_SPEED, 2, s1)
+            rig.scan_to(s0)
+        th, ss, ang, x = (np.array([r[i] for r in samples]) for i in range(4))
+        model = kayei.WobbleModel().fit(th, ss, ang, x)
+        self.kayei = kayei.Predictor(model, g_al, z_al, float(np.mean(a_g)), float(np.mean(x_z)), x_per_g_at)
+        self.log("kayEi model: " + model.describe())
+        self.log(f"kayEi gonio lever arm: x_per_g {self.kayei.xg_0:+.1f} {self.kayei.xg_slope:+.2f}*s px/deg")
+
+    def do_kayei(self, rot_speed, scan=None):
+        """Predictive mode: tracker thread streams goniometer / Z (and sweeps the scan) from the
+        rotation clock and the learned model; the camera loop measures, learns the residual,
+        trims drift and re-syncs the clock."""
+        rig, h = self.rig, self.rig.h
+        if self.kayei is None:
+            self.do_kayei_learn(scan)
+        pred = self.kayei
+        mode = "kayEi"
+        self.set_mode(mode=mode)
+        t_start = time.time()
+        self.run_rows = []
+        h.rezero_turn(fa.ROT); time.sleep(0.1)
+        clk = kayei.RotClock(rot_speed)
+        th0 = h.position(fa.ROT); clk.sync(th0)
+        v_rot, v_scan = h.velocity(fa.ROT), rig.scan.qVEL()["1"]
+        tr = kayei.AxisTracker(pred, clk, None, fa.HYDRA_IP, rig.z, rate=50.0,
+                               gonio_lead=kayei.gonio_lead(rot_speed), z_lead=kayei.Z_LEAD, gonio_axis=fa.GONIO,
+                               scan_dev=rig.scan, sweep=scan)
+        n, lost, t_sync = 0, 0, time.time()
+        try:
+            h.set_velocity(fa.ROT, rot_speed)
+            h.move_abs(fa.ROT, AXES["rotation"][3])
+            tr.start()
+            self.log(f"{mode}: rotation {rot_speed} deg/s, lead {kayei.gonio_lead(rot_speed) * 1000:.0f} ms"
+                     + (f", scan {scan[0]}..{scan[1]} mm at {scan[2]} mm/s" if scan else "")
+                     + f", residual learning {'on' if self.kayei_ilc else 'off'}")
+            while not self.abort.is_set():
+                f = rig.grab1(fresh=True)
+                now = time.time()
+                if f is None:
+                    continue
+                if tr.error:
+                    raise tr.error
+                if now - t_sync > 0.25:
+                    tq = time.time(); thq = h.position(fa.ROT); clk.sync(thq, (tq + time.time()) / 2); t_sync = time.time()
+                    if thq - th0 < 10 and now - t_start > 3.0:
+                        raise RuntimeError(f"rotation not moving (Hydra error {h.query('ge')})")
+                    self.check_drives()
+                th_f = clk.at(now - kayei.FRAME_DELAY)
+                s = tr.scan_pos(now) if scan else tr.scan_fixed
+                self.live_pos = {"rotation": th_f, "goniometer": tr.g_last if tr.g_last is not None else pred.g_al,
+                                 "z": tr.z_last if tr.z_last is not None else pred.z_al, "scan": s}
+                m = fa.measure(f)
+                self.publish(f, m)
+                n += 1
+                ok = m is not None and m["rms"] <= TRACK_MAX_FIT_RMS
+                self.run_rows.append((now, th_f % 360, s, m["angle"] if m else "", m["x"] if m else "",
+                                      self.live_pos["goniometer"], self.live_pos["z"]))
+                if not ok:
+                    lost += 1
+                    if lost > 20:
+                        raise RuntimeError("fiber lost from the image")
+                    continue
+                lost = 0
+                if self.kayei_ilc:
+                    pred.seen(th_f, m["angle"], m["x"], s)
+            raise Aborted
+        finally:
+            tr.stop()
+            self.live_pos = None
+            h.stop(fa.ROT)
+            time.sleep(0.5)
+            rig.scan.qERR()
+            h.set_velocity(fa.ROT, v_rot)
+            rig.scan.VEL("1", v_scan)
+            dt = time.time() - t_start
+            self.log(f"{mode} ended after {dt:.1f} s, {n} frames ({n / max(dt, 1e-3):.1f}/s); tracker {tr.n_tick} ticks, "
+                     f"{tr.n_cmd} gonio cmds, worst gap {tr.period_max * 1000:.0f} ms; trim gonio {pred.trim_g:+.4f} deg "
+                     f"z {pred.trim_z * 1000:+.1f} um; {pred.res.describe()}")
+            self.summarize_run(mode, t_start, pred.x_z, rot_speed, scan)
 
 
 def draw_chart(hist, now, w, cal):
@@ -515,8 +680,13 @@ class App:
         md.grid(row=1, column=0, columnspan=4, sticky="w", padx=4)
         ttk.Radiobutton(md, text="As is (no compensation)", value="asis", variable=self.l_mode).pack(side="left")
         ttk.Radiobutton(md, text="Live align", value="align", variable=self.l_mode).pack(side="left", padx=8)
-        ttk.Radiobutton(md, text="kayEi - coming soon", value="ultimate",
-                        variable=self.l_mode, state="disabled").pack(side="left")
+        ttk.Radiobutton(md, text="kayEi (predictive)", value="kayei", variable=self.l_mode).pack(side="left")
+        self.k_relearn = tk.BooleanVar(value=False)
+        self.k_ilc = tk.BooleanVar(value=True)
+        kf = ttk.Frame(lv)
+        kf.grid(row=3, column=0, columnspan=4, sticky="w", padx=4)
+        ttk.Checkbutton(kf, text="relearn model at start", variable=self.k_relearn).pack(side="left")
+        ttk.Checkbutton(kf, text="residual learning", variable=self.k_ilc).pack(side="left", padx=8)
         ttk.Label(lv, text="rotation deg/s").grid(row=0, column=0, sticky="w", padx=4)
         self.l_rot = tk.StringVar(value="20")
         ttk.Entry(lv, textvariable=self.l_rot, width=6).grid(row=0, column=1, sticky="w")
@@ -528,9 +698,9 @@ class App:
         for var, lab in ((self.l_from, "from"), (self.l_to, "to"), (self.l_v, "mm/s")):
             ttk.Entry(lf, textvariable=var, width=4).pack(side="left", padx=1)
             ttk.Label(lf, text=lab).pack(side="left")
-        ttk.Button(lv, text="Start LIVE", command=self.live).grid(row=2, column=0, columnspan=2, sticky="w", padx=4, pady=2)
+        ttk.Button(lv, text="Start LIVE", command=self.live).grid(row=4, column=0, columnspan=2, sticky="w", padx=4, pady=2)
         tk.Button(lv, text="STOP", bg="#c0392b", fg="white", font=("Segoe UI", 10, "bold"), width=10,
-                  command=self.w.stop).grid(row=2, column=3, sticky="e", padx=4)
+                  command=self.w.stop).grid(row=4, column=3, sticky="e", padx=4)
         ttk.Label(side, textvariable=self.v["busy"], foreground="#2a78d6").pack(anchor="w")
 
         cols = ("scan", "rot", "gonio", "z", "angle", "x px", "it", "s")
@@ -608,7 +778,14 @@ class App:
             if None in scan or not (0 <= scan[0] < scan[1] <= 50 and 0 < scan[2] <= 20):
                 self.add_log("live scan: need 0 <= from < to <= 50 mm, 0 < speed <= 20 mm/s")
                 return
-        comp = self.l_mode.get() == "align"
+        mode = self.l_mode.get()
+        if mode == "kayei":
+            if self.k_relearn.get():
+                self.w.kayei = None
+            self.w.kayei_ilc = self.k_ilc.get()
+            self.w.submit("kayEi", lambda: self.w.do_live(rot, scan, mode_name="kayei"))
+            return
+        comp = mode == "align"
         self.w.submit("LIVE align" if comp else "AS IS", lambda: self.w.do_live(rot, scan, compensate=comp))
 
     def snapshot(self):
@@ -693,6 +870,7 @@ class App:
                  color=(120, 255, 120) if ok else (0, 210, 255))
         if st.get("mode"):
             label = (f"LIVE ALIGN  {st['fps']:4.1f} corrections/s" if st["mode"] == "LIVE align"
+                     else f"kayEi PREDICTIVE  {st['fps']:4.1f} fps" if st["mode"] == "kayEi"
                      else f"{st['mode']}  {st['fps']:4.1f} fps")
             text(view, label, (12, view.shape[0] - 16), 0.7, (80, 200, 255))
         if self.writer is not None and int(time.time() * 2) % 2:

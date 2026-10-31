@@ -133,22 +133,25 @@ class Predictor:
     def x_per_g(self, s):
         return self.xg_0 + self.xg_slope * s
 
+    def _dg(self, th):
+        """goniometer offset from the aligned reference that makes the fiber straight at th"""
+        ang, _ = self.model.predict(th, 0.0)   # the angle does not depend on the scan position
+        return -ang / self.a_g + self.res.get(th)[0] + self.trim_g
+
     def command(self, th_g, th_z, s):
-        """goniometer target for rotation angle th_g, Z target for th_z (different leads)"""
-        ang, _ = self.model.predict(th_g, s)
-        rg, _ = self.res.get(th_g)
-        dg = -ang / self.a_g + rg + self.trim_g
+        """goniometer target for rotation angle th_g, Z target for th_z (different leads).
+        Z must also undo the image shift the goniometer tilt causes (lever arm x_per_g(s)),
+        using the tilt that will be in effect when the Z target applies, i.e. _dg(th_z)."""
+        dg = self._dg(th_g)
         _, x = self.model.predict(th_z, s)
-        _, rz = self.res.get(th_z)
-        dg_at_z, _ = self.res.get(th_z)
-        dg_z = -self.model.predict(th_z, s)[0] / self.a_g + dg_at_z + self.trim_g
-        dz = -(x + self.x_per_g(s) * dg_z) / self.x_z + rz + self.trim_z
+        dz = -(x + self.x_per_g(s) * self._dg(th_z)) / self.x_z + self.res.get(th_z)[1] + self.trim_z
         return self.g_al + dg, self.z_al + dz
 
     def seen(self, th, angle, x, s):
-        """camera still saw (angle, x) at rotation angle th: learn it"""
+        """camera still saw (angle, x) at rotation angle th: the corrections that would have
+        removed it go into the residual table (shape) and the trim (mean)"""
         dg = -angle / self.a_g
-        dz = -(x + self.x_per_g(s) * 0.0) / self.x_z  # the gonio part of this error is already in dg
+        dz = -(x + self.x_per_g(s) * dg) / self.x_z   # the extra tilt dg shifts the image too
         self.res.update(th, dg, dz)
         self.trim_g += TRIM_GAIN * dg
         self.trim_z += TRIM_GAIN * dz
@@ -169,6 +172,10 @@ class Tracker(threading.Thread):
         self.error = None
         self.n_cmd, self.n_tick, self.g_last, self.z_last = 0, 0, None, None
         self.period_max = 0.0
+        self.scan_fixed = 1.0
+
+    def tick_extra(self, now):
+        pass
 
     def run(self):
         from hydra import Hydra
@@ -191,6 +198,7 @@ class Tracker(threading.Thread):
                     h.move_abs(self.gonio_axis, g); self.g_last = g; self.n_cmd += 1
                 if self.z is not None and (self.z_last is None or abs(z - self.z_last) > 0.0003):
                     self.z.MOV("1", z); self.z_last = z
+                self.tick_extra(now)
                 self.n_tick += 1
                 t_next += dt
                 lag = t_next - time.perf_counter()
@@ -206,3 +214,49 @@ class Tracker(threading.Thread):
     def stop(self):
         self.stop_evt.set()
         self.join(timeout=2)
+
+
+def gonio_lead(rot_speed):
+    """best lead from the 2026-10-31 sweep: ~30 ms at 100 deg/s, ~45 ms at 200, >=45 at 360"""
+    return 0.025 + 0.0001 * rot_speed
+
+
+class AxisTracker(Tracker):
+    """Tracker that also owns the scan stage: fixed position, or a sweep lo <-> hi at v mm/s,
+    so that all PI traffic happens in this one thread."""
+
+    def __init__(self, *a, scan_dev=None, sweep=None, **k):
+        super().__init__(*a, **k)
+        self.scan_dev, self.sweep = scan_dev, sweep     # sweep = (lo, hi, v) or None
+        self.scan_from = self.scan_to = None
+        self.t_scan = None
+        self.scan_at = self.scan_pos
+
+    def scan_pos(self, t):
+        """estimated scan position from the commanded sweep (no USB query)"""
+        if not self.sweep or self.t_scan is None:
+            return self.scan_fixed
+        lo, hi, v = self.sweep
+        d = min((t - self.t_scan) * v, abs(self.scan_to - self.scan_from))
+        return self.scan_from + d * np.sign(self.scan_to - self.scan_from)
+
+    def run(self):
+        if self.scan_dev is not None:
+            self.scan_fixed = self.scan_dev.qPOS()["1"]
+        if self.sweep:
+            lo, hi, v = self.sweep
+            self.scan_dev.VEL("1", v)
+            self.scan_from, self.scan_to = self.scan_fixed, hi
+            self.scan_dev.MOV("1", hi); self.t_scan = time.time()
+        try:
+            super().run()
+        finally:
+            if self.sweep:
+                self.scan_dev.HLT("1", noraise=True)
+
+    def tick_extra(self, now):
+        if self.sweep and now - self.t_scan > abs(self.scan_to - self.scan_from) / self.sweep[2] + 0.3:
+            lo, hi, v = self.sweep
+            if self.scan_dev.qONT()["1"]:
+                self.scan_from, self.scan_to = self.scan_to, (lo if self.scan_to == hi else hi)
+                self.scan_dev.MOV("1", self.scan_to); self.t_scan = time.time()
