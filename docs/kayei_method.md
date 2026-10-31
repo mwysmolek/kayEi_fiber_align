@@ -67,6 +67,30 @@ raised automatically when the illumination is dim (`kayei_learn.Rig`).
 Noise floor with everything static: **0.0002 deg** angle, 0.02 px offset (std over 15
 frames). This is far below any mechanical effect.
 
+### 3.1 Image scale and fiber diameter (2026-10-31)
+
+`fiber_diameter.py`: Z stepped over +/-2 mm in 0.25 mm steps (5 frames per step), the
+fiber-centre shift fitted against Z; the fiber width (outermost edges) converted with it.
+
+| Scan position | Image scale | Width 20 / 12 ms | Diameter 20 / 12 ms |
+|---|---|---|---|
+| 5 mm | 48.43 +/- 0.02 px/mm | 54.3 / 53.2 px | 1.121 / 1.098 mm |
+| 25 mm | 48.88 +/- 0.02 px/mm | 54.9 / 53.9 px | 1.124 / 1.102 mm |
+| 45 mm | 49.31 +/- 0.02 px/mm | 55.7 / 54.8 px | 1.130 / 1.111 mm |
+
+- **Diameter 1.114 +/- 0.012 mm** (caliper 1.1 mm). The +/-0.01 mm is the exposure
+  dependence of the apparent width (about 1 px): the half-rim-height edge of a transparent
+  cylinder moves slightly with the rim brightness. Within one exposure the width is
+  repeatable to 0.1 px.
+- **Image scale 20.46 um/px** on average, but it grows by 1.8 % from scan position 5 to
+  45 mm (48.4 -> 49.3 px/mm): the fiber comes closer to the camera along its length. That is
+  the out-of-plane component of the fiber tilt - the focus variation the model predicts
+  (section 7.4, open physics) and no axis in this setup corrects. kayEi uses the scale
+  at the calibration position; a 1.8 % scale error on a 22 px correction is 0.4 px,
+  comparable to the measurement noise.
+
+![fiber diameter](figures/fiber_diameter.png)
+
 ## 4. Step-by-step alignment (2026-10-30)
 
 `fiber_align.py`: calibrate (finite differences of goniometer and Z), then iterate
@@ -351,6 +375,7 @@ Reading the table:
 | 2026-10-30 | alignment at 6 rotation angles | `fiber_align.py` | 0.02 deg / 1 px in 1-2 iterations |
 | 2026-10-30 | as is vs live align | `gui.py`, `gui_log.txt` | 0.27-0.41 -> 0.021 deg; 150-182 -> 9.7 um |
 | 2026-10-30 | live align vs speed | `gui_log.txt` | 0.021 / 0.039 / 0.111 deg at 20 / 50 / 100 deg/s |
+| 2026-10-31 | image scale + fiber diameter | `fiber_diameter.py`, `kayei_data/fiber_diameter.csv` | 20.46 um/px (+1.8 % along the scan), 1.114 +/- 0.012 mm |
 | 2026-10-31 | latency step test | `kayei_learn.py latency`, `kayei_data/latency.csv` | 58 ms response, 159 ms settle |
 | 2026-10-31 | wobble sine model | `kayei_learn.py wobble`, `kayei_data/wobble.csv` | residual 0.007 deg / 0.1 px, repeatable |
 | 2026-10-31 | goniometer stream tests | `kayei_data/mech_test.py` | 25-84 ms lag, full amplitude |
