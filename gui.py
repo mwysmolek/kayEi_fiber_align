@@ -6,6 +6,8 @@ All hardware is driven from ONE worker thread (Hydra socket and PI DLL are not s
 threads); buttons queue commands for it. Stop sets an abort flag (checked between alignment
 steps / every live frame) and sends nabort to both Hydra axes over a separate connection."""
 import collections
+import csv
+import os
 import queue
 import threading
 import time
@@ -29,7 +31,7 @@ REC_FPS = 20                 # recorded movie runs in real time at this frame ra
 LOG_FILE = __file__.rsplit("\\", 1)[0] + "\\gui_log.txt"
 DATA_DIR = __file__.rsplit("\\", 1)[0] + "\\kayei_data"
 LEARN_SPEED = 90.0          # deg/s for the kayEi learning turns
-START_EXPOSURE_MS = 20.0     # >= 10 ms needed for clean fiber edges (dim rims at shorter exposure)
+START_EXPOSURE_MS = fa.EXPOSURE_MS   # one place for the exposure: fiber_align.EXPOSURE_MS (kayei.FRAME_DELAY depends on it)
 TRACK_MAX_FIT_RMS = 1.5      # px; frames with a worse straight-line fit are not used for steering
 TRACK_GAIN = 0.6             # fraction of the measured error corrected per frame (live mode)
 TRACK_TOL_ANGLE = 0.005      # deg, dead band in live mode
@@ -440,7 +442,7 @@ class Worker(threading.Thread):
                 if f is None:
                     continue
                 if now - t_sync > 0.25:
-                    tq = time.time(); thq = h.position(fa.ROT); clk.sync(thq, (tq + time.time()) / 2); t_sync = time.time()
+                    tq = time.time(); thq = h.position(fa.ROT); t1 = time.time(); clk.sync(thq, (tq + t1) / 2, rtt=t1 - tq); t_sync = t1
                     if thq - th0 < 10 and now - t_start > 2.0:
                         raise RuntimeError(f"rotation not moving (Hydra error {h.query('ge')})")
                     self.check_drives()
@@ -506,11 +508,12 @@ class Worker(threading.Thread):
         t_start = time.time()
         self.run_rows = []
         h.rezero_turn(fa.ROT); time.sleep(0.1)
+        pred.res.n_per_turn = max(30.0, 65.0 * 360.0 / rot_speed)   # frames per turn (camera ~65 fps)
         clk = kayei.RotClock(rot_speed)
         th0 = h.position(fa.ROT); clk.sync(th0)
         v_rot, v_scan = h.velocity(fa.ROT), rig.scan.qVEL()["1"]
-        tr = kayei.AxisTracker(pred, clk, None, fa.HYDRA_IP, rig.z, rate=50.0,
-                               gonio_lead=kayei.gonio_lead(rot_speed), z_lead=kayei.gonio_lead(rot_speed), gonio_axis=fa.GONIO,
+        tr = kayei.AxisTracker(pred, clk, None, fa.HYDRA_IP, rig.z, rate=kayei.TRACK_RATE,
+                               gonio_lead=kayei.gonio_lead(rot_speed), z_lead=kayei.z_lead(rot_speed), gonio_axis=fa.GONIO,
                                scan_dev=rig.scan, sweep=scan)
         n, lost, t_sync = 0, 0, time.time()
         try:
@@ -527,8 +530,9 @@ class Worker(threading.Thread):
             clk.sync(h.position(fa.ROT))
             h.set_velocity(fa.ROT, rot_speed)
             h.move_abs(fa.ROT, AXES["rotation"][3])
+            t_rot = time.time()
             th_learn_from = th0 + 360.0
-            self.log(f"{mode}: rotation {rot_speed} deg/s, lead {kayei.gonio_lead(rot_speed) * 1000:.0f} ms"
+            self.log(f"{mode}: rotation {rot_speed} deg/s, leads gonio {kayei.gonio_lead(rot_speed) * 1000:.0f} / Z {kayei.z_lead(rot_speed) * 1000:.0f} ms{' (velocity-shaped)' if kayei.VSHAPE else ''}"
                      + (f", scan {scan[0]}..{scan[1]} mm at {scan[2]} mm/s" if scan else "")
                      + f", residual learning {'on' if self.kayei_ilc else 'off'}")
             while not self.abort.is_set():
@@ -539,8 +543,8 @@ class Worker(threading.Thread):
                 if tr.error:
                     raise tr.error
                 if now - t_sync > 0.25:
-                    tq = time.time(); thq = h.position(fa.ROT); clk.sync(thq, (tq + time.time()) / 2); t_sync = time.time()
-                    if thq - th0 < 10 and now - t_start > 3.0:
+                    tq = time.time(); thq = h.position(fa.ROT); t1 = time.time(); clk.sync(thq, (tq + t1) / 2, rtt=t1 - tq); t_sync = t1
+                    if thq - th0 < 10 and now - t_rot > 3.0:
                         raise RuntimeError(f"rotation not moving (Hydra error {h.query('ge')})")
                     self.check_drives()
                 th_f = clk.at(now - kayei.FRAME_DELAY)
@@ -559,7 +563,7 @@ class Worker(threading.Thread):
                         raise RuntimeError("fiber lost from the image")
                     continue
                 lost = 0
-                if self.kayei_ilc and th_f >= th_learn_from:
+                if self.kayei_ilc and th_f >= th_learn_from and not tr.saturated:
                     pred.seen(th_f, m["angle"], m["x"], s)
             raise Aborted
         finally:
@@ -572,8 +576,17 @@ class Worker(threading.Thread):
             rig.scan.VEL("1", v_scan)
             dt = time.time() - t_start
             self.log(f"{mode} ended after {dt:.1f} s, {n} frames ({n / max(dt, 1e-3):.1f}/s); tracker {tr.n_tick} ticks, "
-                     f"{tr.n_cmd} gonio cmds, worst gap {tr.period_max * 1000:.0f} ms; trim gonio {pred.trim_g:+.4f} deg "
+                     f"{tr.n_cmd} gonio cmds, worst gap {tr.period_max * 1000:.0f} ms, {clk.rejected} slow syncs ignored, peak speeds {getattr(tr, 'v_peak', (0, 0))[0]:.2f} deg/s / {getattr(tr, 'v_peak', (0, 0))[1]:.2f} mm/s; trim gonio {pred.trim_g:+.4f} deg "
                      f"z {pred.trim_z * 1000:+.1f} um; {pred.res.describe()}")
+            if clk.log:
+                cl = np.array(clk.log)
+                self.log(f"{mode} clock: {len(cl)} syncs, correction rms {cl[:, 1].std():.2f} deg, max {np.abs(cl[:, 1]).max():.2f} deg, "
+                         f"{(np.abs(cl[:, 1]) > 1.0).sum()} above 1 deg, rtt median {np.median(cl[:, 2]) * 1000:.1f} ms")
+            stamp = time.strftime("%Y%m%d_%H%M%S")
+            with open(os.path.join(DATA_DIR, f"ticks_{stamp}_{rot_speed:.0f}dps.csv"), "w", newline="") as fh:
+                csv.writer(fh).writerows([("t", "g_cmd", "z_cmd", "v_g", "v_z")] + list(tr.ticks))
+            with open(os.path.join(DATA_DIR, f"syncs_{stamp}_{rot_speed:.0f}dps.csv"), "w", newline="") as fh:
+                csv.writer(fh).writerows([("t", "corr_deg", "rtt_s", "gain")] + list(clk.log))
             self.summarize_run(mode, t_start, pred.x_z, rot_speed, scan)
 
 

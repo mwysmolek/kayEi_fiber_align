@@ -15,12 +15,29 @@ import time
 
 import numpy as np
 
-FRAME_DELAY = 0.030    # s between the exposure (mid) and the encoder reading taken after the frame (measured)
+import fiber_align as fa
+
+FRAME_DELAY = 0.030    # s between the frame and the encoder reading taken after it: measured 30 ms at 20 ms
+                       # exposure and 31 ms at 4 ms exposure (the exposure length does not enter)
 GONIO_LEAD = 0.100     # s: command the goniometer for the angle this far ahead (58 ms first response + travel)
 Z_LEAD = 0.035         # s: Z measured like the goniometer (58 ms response, 60-70 ms sine lag) -> same lead law
-ILC_BINS = 72          # 5 deg bins
+VSHAPE = True          # velocity-shaped streaming: each tick also sets the stage speed to the speed the
+                       # trajectory needs (x margin); without it a stepper executes the 50 Hz target stream
+                       # as stop-and-go bursts at full speed (measured 2026-10-31 evening, 1.26 deg wobble)
+VSHAPE_MARGIN = 1.15
+TRACK_RATE = 50.0      # Hz: target stream rate of the tracker thread
+VSHAPE_VSTEP = 0.10    # resend the stage speed only when it changed by this fraction (command traffic)
+SYNC_GAIN = 0.3        # rotation clock: fraction of an encoder phase correction applied per sync
+SYNC_RTT_MAX = 0.012   # s: encoder queries slower than this (Hydra busy) are not used for the clock
+SYNC_FULL_ABOVE = 1.5  # deg: larger corrections (start-up) are applied fully
+GONIO_VMIN, GONIO_VMAX = 0.02, 4.0     # deg/s (goniometer stepper: 4 deg/s is the configured maximum)
+Z_VMIN, Z_VMAX = 0.05, 10.0            # mm/s (VT-80 on the C-663)
+ILC_HARMONICS = 4      # residual learner: Fourier harmonics of the rotation angle (3-jaw chuck -> 3rd)
+ILC_CAP_G, ILC_CAP_Z = 0.5, 0.5   # deg, mm: cap per coefficient
 ILC_GAIN = 0.3         # fraction of the seen residual written into the table per visit
 TRIM_GAIN = 0.03       # integral trim per frame
+FB_GAIN_Z = 0.4        # proportional camera feedback on the offset into the Z command (the goniometer's
+                       # ragged motion leaks into the offset through its lever arm; Z can take it out)
 
 
 class RotClock:
@@ -29,9 +46,25 @@ class RotClock:
     def __init__(self, speed):
         self.w = speed
         self.th_q, self.t_q = 0.0, time.time()
+        self.synced, self.rejected, self.log = False, 0, []   # log: (t, correction deg, rtt, gain)
 
-    def sync(self, theta, t=None):
-        self.th_q, self.t_q = theta, time.time() if t is None else t
+    def sync(self, theta, t=None, rtt=None, gain=SYNC_GAIN):
+        """Encoder reading theta taken at time t (round trip rtt). While rotating, the reading only
+        nudges the phase (gain) and slow queries are ignored: a query delayed by other Hydra traffic
+        carries a timestamp error of tens of ms = degrees of rotation (seen as command spikes)."""
+        t = time.time() if t is None else t
+        if self.synced and self.w != 0.0:
+            corr = theta - self.at(t)
+            if rtt is not None and rtt > SYNC_RTT_MAX:
+                self.rejected += 1
+                self.log.append((t, corr, rtt, 0.0))
+                return False
+            if abs(corr) > SYNC_FULL_ABOVE:   # start-up (rotation still accelerating): take it fully
+                gain = 1.0
+            self.log.append((t, corr, rtt if rtt is not None else -1.0, gain))
+            theta = self.at(t) + gain * corr
+        self.th_q, self.t_q, self.synced = theta, t, True
+        return True
 
     def at(self, t):
         return self.th_q + self.w * (t - self.t_q)
@@ -83,36 +116,45 @@ class WobbleModel:
 
 
 class Residual:
-    """Learned correction per rotation-angle bin (iterative learning): what the camera still saw
-    at that angle, in goniometer deg and Z mm, applied on the next visits."""
+    """Learned periodic correction (iterative learning) as a low-order Fourier series over the
+    rotation angle: what the camera still saw at that angle, in goniometer deg and Z mm, applied on
+    the next visits. Harmonics 1..ILC_HARMONICS only (no DC: the mean belongs to the trim), so the
+    learner cannot wind up on measurement noise or on a stage at its speed limit (a 72-bin table did,
+    2026-10-31 evening, once the stages were fast enough to follow it); amplitude capped."""
 
-    def __init__(self, bins=ILC_BINS, gain=ILC_GAIN):
-        self.g = np.zeros(bins)
-        self.z = np.zeros(bins)
-        self.n = np.zeros(bins, int)
-        self.gain = gain
+    def __init__(self, harmonics=ILC_HARMONICS, gain=ILC_GAIN):
+        self.k = np.arange(1, harmonics + 1)
+        self.cg = np.zeros(2 * harmonics)     # cos/sin coefficients, goniometer deg
+        self.cz = np.zeros(2 * harmonics)     # Z mm
+        self.gain, self.n_per_turn, self.n = gain, 240.0, 0   # gain = fraction of the error removed per turn
 
-    def _bin(self, th):
-        return int(th % 360 // (360 / len(self.g)))
+    def _phi(self, th):
+        a = np.radians(th) * self.k
+        return np.r_[np.cos(a), np.sin(a)]
 
     def update(self, th, dg, dz):
         """dg, dz: the correction (deg, mm) that WOULD have removed what was seen at th"""
-        i = self._bin(th)
-        self.g[i] += self.gain * dg
-        self.z[i] += self.gain * dz
-        self.n[i] += 1
-        # the table holds the SHAPE over the turn only; the mean (drift) belongs to the trim
-        seen = self.n > 0
-        self.g[seen] -= self.g[seen].mean()
-        self.z[seen] -= self.z[seen].mean()
+        mu = self.gain * 2.0 / self.n_per_turn       # per-sample step so that one turn applies 'gain'
+        phi = self._phi(th)
+        self.cg += mu * dg * phi
+        self.cz += mu * dz * phi
+        np.clip(self.cg, -ILC_CAP_G, ILC_CAP_G, out=self.cg)
+        np.clip(self.cz, -ILC_CAP_Z, ILC_CAP_Z, out=self.cz)
+        self.n += 1
 
     def get(self, th):
-        i = self._bin(th)
-        return self.g[i], self.z[i]
+        phi = self._phi(th)
+        return float(self.cg @ phi), float(self.cz @ phi)
+
+    def amplitudes(self):
+        h = len(self.k)
+        return np.hypot(self.cg[:h], self.cg[h:]), np.hypot(self.cz[:h], self.cz[h:])
 
     def describe(self):
-        return (f"residual table: {np.count_nonzero(self.n)}/{len(self.n)} bins, gonio +/-{np.abs(self.g).max():.4f} deg, "
-                f"Z +/-{np.abs(self.z).max() * 1000:.1f} um")
+        ag, az = self.amplitudes()
+        return (f"residual (Fourier 1..{len(self.k)}, {self.n} updates): gonio " + "/".join(f"{v:.4f}" for v in ag)
+                + " deg, Z " + "/".join(f"{v * 1000:.1f}" for v in az) + " um")
+
 
 
 class Predictor:
@@ -132,6 +174,7 @@ class Predictor:
             self.xg_slope, self.xg_0 = 0.0, pts[0][1]
         self.res = residual or Residual()
         self.trim_g, self.trim_z = 0.0, 0.0
+        self.fb_z = 0.0
         self._s = 0.0
 
     def x_per_g(self, s):
@@ -149,7 +192,7 @@ class Predictor:
         self._s = s
         dg = self._dg(th_g)
         _, x = self.model.predict(th_z, s)
-        dz = -(x + self.x_per_g(s) * self._dg(th_z)) / self.x_z + self.res.get(th_z)[1] + self.trim_z
+        dz = -(x + self.x_per_g(s) * self._dg(th_z)) / self.x_z + self.res.get(th_z)[1] + self.trim_z + self.fb_z
         return self.g_al + dg, self.z_al + dz
 
     def seen(self, th, angle, x, s):
@@ -160,6 +203,7 @@ class Predictor:
         self.res.update(th, dg, dz)
         self.trim_g += TRIM_GAIN * dg
         self.trim_z += TRIM_GAIN * dz
+        self.fb_z = FB_GAIN_Z * dz
 
 
 class Tracker(threading.Thread):
@@ -178,6 +222,8 @@ class Tracker(threading.Thread):
         self.n_cmd, self.n_tick, self.g_last, self.z_last = 0, 0, None, None
         self.period_max = 0.0
         self.scan_fixed = 1.0
+        self.saturated = False     # a stage is at its speed limit (learning must pause: wind-up otherwise)
+        self.ticks = []            # (t, g, z, vg, vz) per tick, for diagnosis
 
     def tick_extra(self, now):
         pass
@@ -188,6 +234,10 @@ class Tracker(threading.Thread):
         dt = 1.0 / self.rate
         t_next = time.perf_counter()
         t_prev = time.time()
+        vg_last = vz_last = None
+        errcheck = self.z.errcheck if self.z is not None else None
+        if self.z is not None:
+            self.z.errcheck = False     # a GCS command costs 1 ms without the error query, 16 ms with it
         try:
             while not self.stop_evt.is_set():
                 now = time.time()
@@ -199,6 +249,25 @@ class Tracker(threading.Thread):
                     raise RuntimeError(f"goniometer would need {g:+.3f} deg")
                 if self.z is not None and not 0.2 < z < 24.8:
                     raise RuntimeError(f"Z would need {z:.3f} mm")
+                if VSHAPE:
+                    # speed the trajectory needs over the next tick, with margin so the stage never falls behind
+                    g2, z2 = self.p.command(self.clk.at(now + self.gonio_lead + dt), self.clk.at(now + self.z_lead + dt), s)
+                    if self.clk.w == 0.0:   # pre-positioning (rotation not started): full speed
+                        vg, vz = GONIO_VMAX, Z_VMAX
+                    else:
+                        # trajectory speed, or more when the target jumped (trim / residual update), so that
+                        # the stage catches up within a tick instead of crawling behind (wind-up otherwise)
+                        dg_ = max(abs(g2 - g), abs(g - self.g_last) if self.g_last is not None else 0.0)
+                        dz_ = max(abs(z2 - z), abs(z - self.z_last) if self.z_last is not None else 0.0)
+                        vg = min(max(dg_ / dt * VSHAPE_MARGIN, GONIO_VMIN), GONIO_VMAX)
+                        vz = min(max(dz_ / dt * VSHAPE_MARGIN, Z_VMIN), Z_VMAX)
+                        self.saturated = vg >= GONIO_VMAX or vz >= Z_VMAX
+                        self.v_peak = max(getattr(self, "v_peak", (0.0, 0.0))[0], vg), max(getattr(self, "v_peak", (0.0, 0.0))[1], vz)
+                    if vg_last is None or abs(vg - vg_last) > VSHAPE_VSTEP * vg_last:
+                        h.set_velocity(self.gonio_axis, vg); vg_last = vg
+                    if self.z is not None and (vz_last is None or abs(vz - vz_last) > VSHAPE_VSTEP * vz_last):
+                        self.z.VEL("1", vz); vz_last = vz
+                self.ticks.append((now, g, z, vg_last or 0.0, vz_last or 0.0))
                 if self.g_last is None or abs(g - self.g_last) > 0.0003:
                     h.move_abs(self.gonio_axis, g); self.g_last = g; self.n_cmd += 1
                 if self.z is not None and (self.z_last is None or abs(z - self.z_last) > 0.0003):
@@ -214,7 +283,15 @@ class Tracker(threading.Thread):
         except Exception as e:
             self.error = e
         finally:
-            h.close()
+            try:
+                h.set_velocity(self.gonio_axis, GONIO_VMAX)
+                if self.z is not None:
+                    self.z.VEL("1", Z_VMAX); self.z.errcheck = errcheck
+                    err = self.z.qERR()
+                    if err and self.error is None:
+                        self.error = RuntimeError(f"Z controller error {err} during the run")
+            finally:
+                h.close()
 
     def stop(self):
         self.stop_evt.set()
@@ -222,8 +299,15 @@ class Tracker(threading.Thread):
 
 
 def gonio_lead(rot_speed):
-    """best lead from the 2026-10-31 sweep: ~30 ms at 100 deg/s, ~45 ms at 200, >=45 at 360"""
-    return 0.025 + 0.0001 * rot_speed
+    """velocity-shaped streaming, sine tracking test 2026-10-31 evening (1.26 deg amplitude, camera
+    as sensor): best lead 47 ms at 100 deg/s, 72 ms at 200 deg/s. (Plain streaming, small wobble:
+    0.025 + 0.0001 * speed.)"""
+    return 0.022 + 0.00025 * rot_speed
+
+
+def z_lead(rot_speed):
+    """same test for Z (1.2 mm amplitude): 49 ms at 100 deg/s, 58 ms at 200 deg/s"""
+    return 0.040 + 0.00009 * rot_speed
 
 
 class AxisTracker(Tracker):

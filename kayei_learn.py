@@ -25,7 +25,7 @@ from hydra import Hydra
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kayei_data")
 SCAN_SN = "0165500183"
-EXPOSURE_MS = 20.0
+EXPOSURE_MS = fa.EXPOSURE_MS
 GAINS = (1.0, 4.0, 6.0, 9.0)   # tried in order until the fiber is detected (illumination varies)
 GONIO_STEP = 0.3     # deg
 Z_STEP = 0.2         # mm (~10 px)

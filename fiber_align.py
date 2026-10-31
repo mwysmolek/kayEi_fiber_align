@@ -22,6 +22,8 @@ TOL_PX = 1.0       # px, fiber centre vs image centre
 MAX_ITER = 8
 BAND = 30          # rows per band for edge finding
 ROBUST = True      # sigma-clip the bands (False = plain least squares over all bands)
+EXPOSURE_MS = 4.0  # 2026-10-31 evening illumination: the fiber glows (bright on grey), saturates above ~4 ms;
+                   # with the earlier dark-fiber-on-bright-background light 20 ms was needed (dim rims)
 
 
 def measure(frame):

@@ -53,7 +53,7 @@ for speed in SPEEDS:
         tag = f"{speed:.0f} deg/s" + (" + scan" if scan else "")
         run(f"AS IS {tag}", lambda s=speed, sc=scan: w.do_live(s, sc, compensate=False), SECONDS[speed])
         run(f"LIVE align {tag}", lambda s=speed, sc=scan: w.do_live(s, sc, compensate=True), SECONDS[speed])
-        w.kayei.res = kayei.Residual(); w.kayei.trim_g = w.kayei.trim_z = 0.0
+        w.kayei.res = kayei.Residual(); w.kayei.trim_g = w.kayei.trim_z = w.kayei.fb_z = 0.0
         run(f"kayEi {tag}", lambda s=speed, sc=scan: w.do_live(s, sc, mode_name="kayei"), SECONDS[speed])
 
 w.quit.set()
