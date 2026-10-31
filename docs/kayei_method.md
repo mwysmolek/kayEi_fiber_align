@@ -67,6 +67,11 @@ raised automatically when the illumination is dim (`kayei_learn.Rig`).
 Noise floor with everything static: **0.0002 deg** angle, 0.02 px offset (std over 15
 frames). This is far below any mechanical effect.
 
+Robustness (added 2026-10-31 evening): the straight-line fit over the bands sigma-clips
+bands whose width or centre disagree with the rest, so an object crossing the fiber in part
+of the image (section 5b, a hanging wire) or a glint merging with an edge does not pull the
+line. At least 8 clean bands are required, otherwise the frame is reported as "no fiber".
+
 ### 3.1 Image scale and fiber diameter (2026-10-31)
 
 `fiber_diameter.py`: Z stepped over +/-2 mm in 0.25 mm steps (5 frames per step), the
@@ -167,17 +172,26 @@ rotation axis (`kayei_data/wobble_map_axis.csv`):
 
 ![3D](figures/wobble_3d.png)
 
-**Repeatability.** The whole measurement was repeated 75 minutes later (18:30; a small load
-had been attached to the free end of the fiber in between, outside the camera's reach - no
-effect within 5-45 mm). The 3D axis agrees **in-plane to 1-3 um** at all five positions; the
-out-of-plane component shifted by -9 to -15 um throughout. That component comes from the
-quadrature phase of the sine, so it is sensitive to timing: 12 um on a 400 um amplitude is a
-1.7 deg phase shift, i.e. about 28 ms at 60 deg/s. The in-plane component is what the
-alignment acts on and is robust; the out-of-plane (focus) estimate needs a dedicated phase
-check before it is trusted below ~15 um. Data: `kayei_data/wobble_map_{1715,1830}.csv`,
-`wobble_map_axis_{1715,1830}.csv`. (In the 18:30 set the angle fit at scan 5 mm has a few
-outlier frames, see the log; the offset fit there is unaffected, 55 um residual coming from
-the same frames.)
+**Repeatability.** The whole measurement was repeated 75 minutes later (18:30). The 3D axis
+agrees **in-plane to 1-3 um** at all five positions; the out-of-plane component shifted by
+-9 to -15 um throughout. That component comes from the quadrature phase of the sine, so it
+is sensitive to timing: 12 um on a 400 um amplitude is a 1.7 deg phase shift, i.e. about
+28 ms at 60 deg/s. The in-plane component is what the alignment acts on and is robust; the
+out-of-plane (focus) estimate needs a dedicated phase check before it is trusted below
+~15 um. Data: `kayei_data/wobble_map_{1715,1830}.csv`, `wobble_map_axis_{1715,1830}.csv`.
+
+Between the two runs a small weight (a bent wire) had been hung on the free end of the
+fiber. It does not rotate with the fiber, so it bends the fiber statically and leaves the
+sine amplitudes unchanged (5 mm: 420 -> 409 um, 45 mm: 158 -> 150 um) - a hanging load is
+not a way to enlarge the wobble. But at scan position 5 mm it crosses the fiber in the
+lower part of the image (`kayei_data/scan5_sheet.png`), and the 18:30 angle data there are
+corrupted (490 of 598 frames off by up to 1 deg, offset residual 55 um): the straight-line
+fit then included the bands where the wire merges with the fiber. Fix (same evening):
+`fiber_align.measure()` now sigma-clips the bands - width outliers first, then centre-line
+outliers over 4 iterations - and with that the fiber at 5 mm is measured correctly in the
+presence of the wire (26-27 of 36 bands kept, fit residual 0.13-0.25 px). The 18:30 offset
+numbers at 5 mm in the table above are from before the fix and carry that error; the
+other positions are unaffected (the wire is out of view there).
 
 **4D.** `docs/figures/wobble_4d.mp4` shows the reconstructed axis rotating in 3D (left,
 with the circles swept by each point over a turn) and, on the right, the in-plane offset

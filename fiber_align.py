@@ -60,6 +60,22 @@ def measure(frame):
         return None
     ys, left, right = map(np.array, (ys, left, right))
     mid = (left + right) / 2
+    # robust straight line: bands whose centre or width disagree with the rest (an object
+    # crossing the fiber, a glint merging with an edge) are dropped by sigma clipping
+    keep = np.ones(len(ys), bool)
+    wmed = np.median(right - left)
+    keep &= np.abs((right - left) - wmed) < max(0.25 * wmed, 3.0)
+    for _ in range(4):
+        if keep.sum() < 8:
+            return None
+        slope, icpt = np.polyfit(ys[keep], mid[keep], 1)
+        r = mid - (slope * ys + icpt)
+        s_r = max(r[keep].std(), 0.3)
+        new_keep = keep & (np.abs(r) < 3.5 * s_r)
+        if new_keep.sum() == keep.sum():
+            break
+        keep = new_keep
+    ys, left, right, mid = ys[keep], left[keep], right[keep], mid[keep]
     slope, icpt = np.polyfit(ys, mid, 1)
     resid = mid - (slope * ys + icpt)
     return {"angle": np.degrees(np.arctan(slope)), "x": slope * h / 2 + icpt - w / 2,
