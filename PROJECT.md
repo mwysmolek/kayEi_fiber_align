@@ -192,30 +192,60 @@ raises the camera gain automatically, the GUI does not yet).
   home/reset buttons, drive-fault detection, log file.
 - Drive faults were caused by extreme manual tilt tests, not hardware.
 
-## Next session
+## Session 2026-10-31 (summary)
 
-0. Repo: github.com/mwysmolek/kayEi_fiber_align (remote `origin`); push needs the user's
-   GitHub login (`git push -u origin main`). PI controllers hang on a USB hub - plug it in.
-1. Start: Hydra power-cycled? -> GUI **Home all Hydra** (or `python hydra.py 172.20.5.201 --home`).
-   Camera power-cycled? -> `python gige_forceip.py 00:06:BE:11:70:BA 172.20.5.20`.
-   Then `C:\dev\hydra\.venv\Scripts\python C:\dev\hydra\gui.py`, **Calibrate**.
-2. Demo movies exist (kayei_data/demo_20261031_175525_*.mp4, headless via kayei_record.py);
-   a GUI-recorded one (Record button) is still an option for the talk.
-2b. kayEi follow-ups: the goniometer (4 deg/s, trapezoid per target, 0.034 deg ripple) is
-    the limit with the tilted fiber - look for a Hydra velocity/trajectory mode in the
-    Venus-3 manual, or test with a smaller tilt (0.1-0.4 deg, where 0.007 deg holds); focus
-    (out-of-plane wobble, docs 5b/5c) - no axis corrects it yet; upper-edge tracking instead
-    of the centre line; fill in the person's hands-on minutes (docs 7.5). Then the user's
-    plan: thinner fiber (detection limit), different optics.
-2b'. If the illumination changes again: run `kayei_data/expo_sweep.py`, set
-    `fiber_align.EXPOSURE_MS` (4 ms for the glowing fiber, 20 ms for dark-on-bright).
-2c. Evaluate any new runs with `kayei_eval.py <date-prefix>`; movies with `kayei_record.py`.
-3. Lower exposure / check what is in the chuck (1.1 mm wide: coated fiber? capillary?).
-4. Track the **upper edge** instead of the centre line (laser simulation needs the edge),
-   decide which image side is "upper" with the camera rotated 90 deg (or rotate the camera).
-5. "kayEi": feed-forward of the wobble sine to keep accuracy at 100+ deg/s.
-6. Focus is not tracked (no axis moves camera-fiber distance) - check focus over the turn.
-7. Optional: make camera IP persistent; hard-spin index re-check.
+Full detail with numbers, figures and raw data: `docs/kayei_method.md` (sections 3.1, 5b, 5c,
+6, 7.1-7.5, 8). In one paragraph: measured all latencies (58 ms command -> image, 30 ms
+frame -> encoder), showed the wobble is a repeatable sine, built **kayEi** (feed-forward of
+the wobble from a learned model, fixed-rate tracker thread, residual learner, trim) and
+validated it against as-is and feedback at 20-360 deg/s with and without scanning. Measured
+the image scale (20.46 um/px) and fiber diameter (1.114 mm), reconstructed the 3D fiber axis
+from one camera. Evening: fiber re-clamped 1.24 deg tilted / 1.75 mm eccentric - found that
+the steppers execute a dense target stream as stop-and-go bursts (velocity-shaped streaming
+now), that the bin residual table winds up (Fourier learner now), that the rotation clock
+needs filtered re-syncs, and that the feedback gain must scale with frame rate. kayEi on the
+tilted fiber: 0.03 deg / 20-50 um up to 100 deg/s; goniometer-limited (4 deg/s) above.
+Pushed to github.com/mwysmolek/kayEi_fiber_align.
+
+## Next session (2026-11-01): different fibers, glass capillary
+
+The plan is to put other samples in the chuck (thinner fibers, a glass capillary) and see
+what the measurement and kayEi achieve. Per sample, in this order (each step ~1-5 min):
+
+1. **Start-up**: Hydra power-cycled? -> GUI **Home all Hydra**. Camera power-cycled? ->
+   `python gige_forceip.py 00:06:BE:11:70:BA 172.20.5.20`. PI hub plugged in.
+   `C:\dev\hydra\.venv\Scripts\python gui.py`, **Ref. PI stages**, **Calibrate**.
+2. **Exposure / detection check** (illumination or sample changed):
+   `python kayei_data/expo_sweep.py` prints width, noise and saturation per exposure; set
+   `fiber_align.EXPOSURE_MS` accordingly (4 ms for the glowing 1.1 mm fiber, 20 ms for
+   dark-on-bright). The band fit needs a peak at least 40 counts above the background and a
+   width of at least 3 px: a 125 um fiber is ~6 px at 20.46 um/px, a 250 um one ~12 px. If a
+   thin fiber is not found, raise the gain (GUI "Auto gain") or the exposure before touching
+   the code; if it is found but noisy, the band fit's `BAND` (30 rows) can be made larger.
+   A glass capillary is a transparent cylinder like the 1.1 mm fiber (bright rims, dim core,
+   glints) - the outermost-edge rule should work; check `width` is stable frame to frame.
+3. **Find and centre**: GUI Z scan / `find_fiber.py` if the sample is out of the frame.
+4. **Scale and diameter**: `python fiber_diameter.py` (Z steps -> px/mm, width -> mm).
+5. **Uncontrolled motion, 3D axis**: `python fiber_wobble_map.py` (5 scan positions, 2 turns
+   each at 60 deg/s; figures wobble_2d/3d.png + wobble_4d.mp4 - rename them per sample, the
+   script overwrites). Tells the tilt/eccentricity of the clamping and the sine residual,
+   i.e. how much there is for kayEi to do and whether the goniometer can do it (needs
+   amplitude x 2 pi x turns/s < 4 deg/s).
+6. **kayEi**: GUI LIVE -> kayEi (predictive) with "relearn model" on, or headless
+   `python kayei_sweep.py` (30 runs, 20 min) -> `python kayei_eval.py <date-prefix>` (table
+   + figure). Movies: `python kayei_record.py 100 40`.
+7. Put the numbers in `docs/kayei_method.md` (new section per sample) and commit.
+
+Things to keep in mind from the evening (details docs 6.7, 7.3e-f):
+- Goniometer: 4 deg/s, accel 50 (400 loses steps), 0.034 deg motion ripple when streamed;
+  its ripple leaks into the offset through the lever arm (-62 px/deg at scan 25 mm).
+- Run-to-run scatter of kayEi is +/-10 %; the 100 deg/s offset drifted 25 -> 45 um over the
+  evening at fixed settings (clamping?) - check the chuck before the first run.
+- Live align (feedback) diverges from 100 deg/s with scan on a 1.26 deg wobble; the tilt
+  of the new sample decides whether it is a usable baseline.
+- Open from before: person's hands-on minutes for docs 7.5; upper-edge tracking; focus
+  (out-of-plane) is predicted but not corrected; a Hydra velocity/trajectory mode would
+  remove the goniometer's ripple (Venus-3 manual).
 
 ## Roadmap
 
