@@ -168,7 +168,18 @@ The goniometer therefore follows a 50 Hz target stream well up to rates beyond w
 360 deg/s rotation requires (0.44 deg x 2 pi x 1 turn/s = 2.8 deg/s), with a delay that
 grows slowly with the rate.
 
-### 6.5 Controller quirks found on the way (Hydra TT, Venus-3)
+### 6.5 Z stage dynamics
+
+Same tests as 6.4 for the camera height stage (PI C-663, VT-80 25 mm), camera-timed
+(`kayei_data/z_dyn.py`): a 0.2 mm step shows in the image after **58 ms** (4 repeats) and
+is settled after 98 ms; a 0.45 mm sine stream at 50 Hz is followed with full amplitude and
+60 / 64 / 68 ms lag for peak rates 0.79 / 1.57 / 2.83 mm/s (8-16 um rms), identical at
+stage velocity 10 and 20 mm/s. Z therefore gets the same lead law as the goniometer.
+The first full-system run used a guessed 60 ms Z lead and showed 22 um rms offset error;
+the measured ~35 ms lead brought it to 10 um (7.2b) - a 25 ms lead error at 100 deg/s is
+2.5 deg of phase on a 22 px sine, i.e. about 1 px.
+
+### 6.6 Controller quirks found on the way (Hydra TT, Venus-3)
 
 - `setnpos v` sets the *origin*: the current position becomes **-v**. It also drags the
   soft limits to [pos - 72000, pos].
@@ -227,16 +238,39 @@ An earlier version of this test (camera loop and goniometer commands in one thre
 error sine that could not be reproduced afterwards (same configuration: 0.033 deg). It
 is recorded here because it is unexplained, not because it is understood.
 
+### 7.2b Full system at 100 deg/s (goniometer + Z + scan), 2026-10-31 afternoon
+
+Through the GUI worker (`gui.py` LIVE mode "kayEi", residual learning on), rotation
+100 deg/s, scan 5-45 mm at 1 mm/s where noted. Errors after the first turn
+(`kayei_eval.py`):
+
+| Change | Scan | Angle rms / max | Offset rms / max |
+|---|---|---|---|
+| first full run (Z lead guessed 60 ms, angle model without s) | no | 0.0098 deg / 0.039 | 21.7 um / 88 |
+| same | yes | 0.0377 / 0.177 | 57.1 / 312 |
+| Z lead measured (35 ms), angle model linear in s | no | 0.0083 / 0.040 | 9.9 / 47 |
+| same | yes | 0.0139 / 0.105 | 22.4 / 190 |
+| + pre-positioning before the rotation starts, residual learning only after turn 1, query-free scan turnaround | yes | **0.0078 / 0.032** | **7.4 / 42** |
+
+Two things were learned on the way, both visible only in the per-frame logs:
+
+- **The fiber is not straight over 45 mm.** With learning turns at both ends of the scan,
+  the angle sine differs between the ends (amplitude change 0.005 deg/mm); a model with
+  the angle independent of s had a 0.08 deg residual, with the angle linear in s it is
+  back to 0.006 deg. The goniometer lever arm also changes along the scan, as expected:
+  x_per_g = -84 + 0.82 s px/deg (0.86 predicted from tan(1 deg) x 49.5 px/mm).
+- **Start transients get learned.** The residual table wrote the start jump of the first
+  turn into the bins of the start angle (0.03-0.04 deg, 50-70 um at th = 120-160 deg,
+  decaying by 30 % per turn). Letting the axes settle before the rotation starts and
+  enabling the table only after one full turn removed it.
+
 ### 7.3 Next steps
 
-1. Z and scan axes in the same scheme (needs the PI controllers; the offset model is
-   already linear in s).
-2. Residual table and trim switched on; expected to take the shape of 6.2 (+/-0.015 deg)
-   down towards the 0.007 deg model floor and remove the bias.
+1. ~~Z and scan axes in the same scheme~~ done (7.2b).
+2. ~~Residual table and trim~~ on; the table now holds +/-0.02 deg / +/-40 um of shape.
 3. Full-system evaluation: as is / live align / kayEi at 20, 50, 100, 200, 360 deg/s,
-   with and without scanning, logged per frame to CSV (`kayei_data/run_*.csv`).
-4. Learn the model at two scan positions in one go (two turns each), including the
-   goniometer lever-arm calibration at both.
+   with and without scanning (`kayei_sweep.py`, `kayei_eval.py`) - running, see 7.4.
+4. ~~Learn at two scan positions~~ done, including the lever-arm calibration at both.
 5. Open physics: the out-of-plane components (e_y, t_y) are the focus variation. No axis
    corrects them in this setup; they can at least be predicted from the same model.
 
@@ -253,6 +287,8 @@ is recorded here because it is unexplained, not because it is understood.
 | 2026-10-31 | latency step test | `kayei_learn.py latency`, `kayei_data/latency.csv` | 58 ms response, 159 ms settle |
 | 2026-10-31 | wobble sine model | `kayei_learn.py wobble`, `kayei_data/wobble.csv` | residual 0.007 deg / 0.1 px, repeatable |
 | 2026-10-31 | goniometer stream tests | `kayei_data/mech_test.py` | 25-84 ms lag, full amplitude |
+| 2026-10-31 | Z dynamics (step, sine stream) | `kayei_data/z_dyn.py` | 58 ms response, 60-68 ms sine lag |
+| 2026-10-31 | kayEi full system at 100 deg/s | `kayei_data/run_20261031_17*.csv` | 0.0078 deg / 7.4 um with scan |
 | 2026-10-31 | kayEi goniometer lead sweep | `kayei_data/tracker_test.py`, `kayei_data/gonio_tracker.csv` | 0.013-0.017 deg at 200-360 deg/s |
 
 ## 9. Reproducing

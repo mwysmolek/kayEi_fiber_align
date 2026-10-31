@@ -151,6 +151,26 @@ Run everything with `C:\dev\hydra\.venv\Scripts\python`.
   sine (learn gonio/Z vs rotation angle, move ahead of time, feedback only for the rest),
   faster PI link (RS-232?), separate threads for camera and commands.
 
+## kayEi - predictive alignment (2026-10-31)
+
+Design, measurements and results: **`docs/kayei_method.md`** (PhD write-up, kept current).
+In short: the wobble is a sine in the rotation angle (residual 0.007 deg / 0.1 px,
+repeatable), the rotation angle is known in advance, so goniometer and Z are driven to
+where the fiber will be (fixed-rate tracker thread, lead ~30-45 ms), a residual table
+learns the rest, a slow trim removes drift. At 100 deg/s with scan: 0.008 deg / 7 um
+(feedback at 100 deg/s: 0.11 deg / 28 um). Full comparison 20-360 deg/s: `kayei_sweep.py`
+-> `kayei_eval.py` -> docs section 7.4.
+
+Files: `kayei.py` (model, clock, predictor, tracker), `kayei_learn.py` (latency / wobble
+measurements), `kayei_sweep.py`, `kayei_eval.py`, data + scratch tests in `kayei_data/`.
+GUI: LIVE mode "kayEi (predictive)" with "relearn model" and "residual learning" switches.
+
+Hydra traps (fixed in `hydra.py`): `setnpos v` makes the position **-v** and drags the soft
+limits to [pos-72000, pos]; a move beyond a soft limit is refused with **error 1004**.
+`Hydra.rezero_turn()` (called at every LIVE start) keeps endless rotation inside the limits.
+Camera: `gige_forceip.py` prints "no ack" but works; illumination varies (kayei_learn.Rig
+raises the camera gain automatically, the GUI does not yet).
+
 ## Session 2026-10-30 (summary)
 
 - PI Software Suite installed (USB driver + GCS DLL), pipython in `.venv`; both C-663 fixed
@@ -165,12 +185,14 @@ Run everything with `C:\dev\hydra\.venv\Scripts\python`.
 
 ## Next session
 
-0. Push the local git repo (`main`, first commit `f435af3`) to a new GitHub repository.
-   Check the git identity first (repo-local: name `wysmo`, email wysmolek@gmail.com).
+0. Repo: github.com/mwysmolek/kayEi_fiber_align (remote `origin`); push needs the user's
+   GitHub login (`git push -u origin main`). PI controllers hang on a USB hub - plug it in.
 1. Start: Hydra power-cycled? -> GUI **Home all Hydra** (or `python hydra.py 172.20.5.201 --home`).
    Camera power-cycled? -> `python gige_forceip.py 00:06:BE:11:70:BA 172.20.5.20`.
    Then `C:\dev\hydra\.venv\Scripts\python C:\dev\hydra\gui.py`, **Calibrate**.
-2. Record the demo movie (Record -> AS IS -> STOP -> Live align -> STOP -> Stop rec).
+2. Record the demo movie (Record -> AS IS -> Live align -> kayEi -> Stop rec).
+2b. kayEi: evaluate the sweep (docs 7.4); camera gain fallback in the GUI; lead as a
+    function of the required axis rate; focus (out-of-plane wobble) prediction.
 3. Lower exposure / check what is in the chuck (1.1 mm wide: coated fiber? capillary?).
 4. Track the **upper edge** instead of the centre line (laser simulation needs the edge),
    decide which image side is "upper" with the camera rotated 90 deg (or rotate the camera).
@@ -195,7 +217,7 @@ Run everything with `C:\dev\hydra\.venv\Scripts\python`.
 12. [x] Translate along the fiber and repeat (GUI: scan + rotate + align)
 13. [x] Stretch: live simultaneous rotation + scan + alignment (44 corrections/s);
         slowest links: PI USB queries (32 ms), goniometer feedback at high rotation speed
-14. [ ] "kayEi": feed-forward / learned alignment for high rotation speeds
+14. [x] "kayEi": predictive alignment (feed-forward + learned residual), 0.008 deg / 7 um at 100 deg/s
 
 ## Open questions
 
