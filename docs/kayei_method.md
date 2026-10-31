@@ -167,6 +167,18 @@ rotation axis (`kayei_data/wobble_map_axis.csv`):
 
 ![3D](figures/wobble_3d.png)
 
+**Repeatability.** The whole measurement was repeated 75 minutes later (18:30; a small load
+had been attached to the free end of the fiber in between, outside the camera's reach - no
+effect within 5-45 mm). The 3D axis agrees **in-plane to 1-3 um** at all five positions; the
+out-of-plane component shifted by -9 to -15 um throughout. That component comes from the
+quadrature phase of the sine, so it is sensitive to timing: 12 um on a 400 um amplitude is a
+1.7 deg phase shift, i.e. about 28 ms at 60 deg/s. The in-plane component is what the
+alignment acts on and is robust; the out-of-plane (focus) estimate needs a dedicated phase
+check before it is trusted below ~15 um. Data: `kayei_data/wobble_map_{1715,1830}.csv`,
+`wobble_map_axis_{1715,1830}.csv`. (In the 18:30 set the angle fit at scan 5 mm has a few
+outlier frames, see the log; the offset fit there is unaffected, 55 um residual coming from
+the same frames.)
+
 **4D.** `docs/figures/wobble_4d.mp4` shows the reconstructed axis rotating in 3D (left,
 with the circles swept by each point over a turn) and, on the right, the in-plane offset
 the camera sees against the out-of-plane offset it cannot see, both along the fiber.
