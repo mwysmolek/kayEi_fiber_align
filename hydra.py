@@ -64,7 +64,19 @@ class Hydra:
         self.send(f"{axis} nrm")  # drive to high switch, sets upper limit to full travel
 
     def set_position(self, axis, pos):
-        self.send(f"{pos} {axis} setnpos")  # redefine current position (software zero)
+        # Venus-3 setnpos sets the ORIGIN: the current position becomes -value (verified 2026-10-31)
+        self.send(f"{-pos} {axis} setnpos")
+
+    def set_limits(self, axis, lo, hi):
+        self.send(f"{lo} {hi} {axis} setnlimit")  # soft limits; setnpos drags them to [pos-72000, pos]
+
+    def rezero_turn(self, axis=2, span=36000):
+        """Keep the rotation count within one turn (same angle modulo 360) and centre the
+        soft limits, so endless one-way rotation never runs into a soft limit (error 1004)."""
+        p = self.position(axis) % 360
+        self.set_position(axis, p)
+        self.set_limits(axis, p - span, p + span)
+        return p
 
     def move_abs(self, axis, pos):
         self.send(f"{pos} {axis} nm")

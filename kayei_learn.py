@@ -26,6 +26,7 @@ from hydra import Hydra
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "kayei_data")
 SCAN_SN = "0165500183"
 EXPOSURE_MS = 20.0
+GAINS = (1.0, 4.0, 6.0, 9.0)   # tried in order until the fiber is detected (illumination varies)
 GONIO_STEP = 0.3     # deg
 Z_STEP = 0.2         # mm (~10 px)
 WOBBLE_SPEEDS = (30.0, 90.0)
@@ -53,6 +54,13 @@ class Rig(fa.Rig):
         self.cam.Connect(fa.CAM_IP)
         self.cam.GetFeature("ExposureAuto").SetString("Off")
         self.cam.f.ExposureTime.Set(EXPOSURE_MS * 1000)
+        for gain in GAINS:   # keep the 20 ms frame; compensate dim illumination with gain
+            self.cam.f.Gain.Set(gain)
+            for _ in range(3):
+                img = self.cam.GetImage(2000)
+            if fa.measure(img.GetNPArray().squeeze()) is not None:
+                break
+        print(f"camera gain {gain:g}")
         self.h = Hydra(fa.HYDRA_IP)
         self.z = pi_stage(fa.Z_SN, "Z")
         self.scan = pi_stage(SCAN_SN, "scan")
