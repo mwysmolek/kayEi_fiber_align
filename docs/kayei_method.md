@@ -325,9 +325,11 @@ Reading the table:
   (7.2: best lead grows with the required axis rate) and the 50 Hz command stream
   (7.2 deg of rotation per command at 360 deg/s).
 - The as-is rows are the disturbance itself: 0.2-0.45 deg and 110-260 um rms,
-  independent of speed as it should be. Their scatter (the fiber was re-chucked / touched
-  at least once during the day, amplitude 0.44 -> 0.51 deg) is why every mode is compared
-  within the same sweep only.
+  independent of speed as it should be. The angle amplitude differs between the morning
+  (0.44 deg, measured at scan position 1 mm) and the afternoon (0.51 deg, learned at 20-26 mm):
+  nobody touched the fiber; it is the bend of the fiber (0.005 deg/mm amplitude change along
+  it, section 7.2b) over the 20 mm between the two scan positions. The as-is scatter is one
+  reason every mode is compared within the same sweep only.
 
 ### 7.4 Next steps
 
