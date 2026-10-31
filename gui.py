@@ -173,6 +173,7 @@ class Worker(threading.Thread):
         try:
             self.rig = Station(self.publish)
             self.do_exposure(ms=START_EXPOSURE_MS, auto=False)
+            self.auto_gain()
         except Exception as e:
             self.log(f"connect FAILED: {e!r}")
             self.set_mode(busy="not connected")
@@ -266,6 +267,18 @@ class Worker(threading.Thread):
             pitools.waitonreferencing(pi)
             pi.MOV("1", back); pitools.waitontarget(pi)
             self.log(f"{name}: referenced on negative limit, back at {pi.qPOS()['1']:.4f} mm")
+
+    def auto_gain(self):
+        """keep the 20 ms frame; raise the camera gain until the fiber is detected (illumination varies)"""
+        gain = self.rig.cam.f.Gain
+        for g in (1.0, 2.0, 4.0, 6.0, 9.0):
+            gain.Set(g)
+            f = None
+            for _ in range(3):
+                f = self.rig.grab1()
+            if f is not None and fa.measure(f) is not None:
+                break
+        self.log(f"camera gain {gain.Get():g}" + ("" if f is not None and fa.measure(f) else " - fiber NOT found"))
 
     def do_calibrate(self):
         m0, self.cal = fa.calibrate(self.rig)
@@ -651,9 +664,10 @@ class App:
         ttk.Entry(cm, textvariable=self.exp, width=7).grid(row=0, column=1)
         ttk.Button(cm, text="Set", command=self.set_exp).grid(row=0, column=2)
         ttk.Checkbutton(cm, text="auto", variable=self.auto, command=self.set_auto).grid(row=0, column=3, padx=6)
-        ttk.Button(cm, text="Snapshot", command=self.snapshot).grid(row=0, column=4)
+        ttk.Button(cm, text="Auto gain", command=lambda: self.w.submit("auto gain", self.w.auto_gain)).grid(row=0, column=4)
+        ttk.Button(cm, text="Snapshot", command=self.snapshot).grid(row=0, column=6)
         self.rec_btn = tk.Button(cm, text="● Record", command=self.toggle_rec)
-        self.rec_btn.grid(row=0, column=5, padx=4)
+        self.rec_btn.grid(row=0, column=7, padx=4)
 
         # homing / reset
         hm = ttk.LabelFrame(side, text="Home / reset")
