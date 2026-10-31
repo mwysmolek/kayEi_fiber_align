@@ -435,6 +435,27 @@ git, 150 MB); the kayEi movie includes its 40 s learning phase.
 
 ![kayEi running](figures/demo_kayei_still.png)
 
+### 7.3c A hanging load, and how it was diagnosed (2026-10-31, 18:45-19:02)
+
+After a small bent wire had been hung on the free end of the fiber (5b), kayEi at 200 deg/s
+returned 0.032-0.043 deg / 25-33 um instead of the 0.009 deg / 12 um of the 17:20 sweep,
+with the measured angle jumping 0.065 deg from frame to frame (0.006 before) and the error
+growing over the run. The candidates were tested one at a time, each in a minute:
+
+| Test | Result | Conclusion |
+|---|---|---|
+| static frames (30) | angle std 0.0001 deg, 36/36 bands | measurement unchanged |
+| as is at 60 and 200 deg/s, goniometer and Z fixed | sine residual 0.008 deg / 3-4 um | the disturbance itself unchanged; no random component |
+| kayEi with residual learning off / on / off | 0.037 / 0.043 / 0.020 deg | not the learning loop; run-to-run scatter x2 |
+| kayEi with the new robust band fit off / on / off | 0.042 / 0.037 / 0.032 deg | not the fit |
+
+What remains is physical and acts only when the goniometer moves: a wire hanging on the
+fiber is a pendulum, the goniometer tilts the whole stage at the wobble frequency, and the
+pendulum swings and tugs the fiber - more at higher speed, not at all in the as-is runs.
+The decisive test (wire removed, same run) is the next entry. Lesson for the setup: nothing
+may hang on the fiber; a larger disturbance for testing is made by clamping the fiber
+off-centre or tilted, which rotates with it and is therefore learnable.
+
 ### 7.4 Next steps
 
 1. ~~Z and scan axes in the same scheme~~ done (7.2b).
@@ -488,6 +509,7 @@ Timestamps below are from files, the GUI log and git; the person's own time is t
 | 2026-10-31 | kayEi full system at 100 deg/s | `kayei_data/run_20261031_17*.csv` | 0.0078 deg / 7.4 um with scan |
 | 2026-10-31 | full comparison sweep, 30 runs | `kayei_sweep.py`, `kayei_data/run_20261031_17[12]*.csv`, `sweep_20261031.log` | kayEi 0.007-0.016 deg / 8-22 um at 20-360 deg/s; feedback 0.020 -> 0.24 deg |
 | 2026-10-31 | demo run with movies, 200 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261031_175525_*.mp4` | as is 0.43 deg -> live align 0.21 -> kayEi 0.010 deg |
+| 2026-10-31 | hanging-wire diagnosis (A/B tests) | `kayei_data/run_20261031_18[5]*`, `run_20261031_19*` | software excluded; pendulum on the tilting stage |
 | 2026-10-31 | kayEi goniometer lead sweep | `kayei_data/tracker_test.py`, `kayei_data/gonio_tracker.csv` | 0.013-0.017 deg at 200-360 deg/s |
 
 ## 9. Reproducing

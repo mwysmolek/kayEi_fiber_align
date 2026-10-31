@@ -21,6 +21,7 @@ TOL_ANGLE = 0.02   # deg, fiber angle in the image
 TOL_PX = 1.0       # px, fiber centre vs image centre
 MAX_ITER = 8
 BAND = 30          # rows per band for edge finding
+ROBUST = True      # sigma-clip the bands (False = plain least squares over all bands)
 
 
 def measure(frame):
@@ -64,8 +65,9 @@ def measure(frame):
     # crossing the fiber, a glint merging with an edge) are dropped by sigma clipping
     keep = np.ones(len(ys), bool)
     wmed = np.median(right - left)
-    keep &= np.abs((right - left) - wmed) < max(0.25 * wmed, 3.0)
-    for _ in range(4):
+    if ROBUST:
+        keep &= np.abs((right - left) - wmed) < max(0.25 * wmed, 3.0)
+    for _ in range(4 if ROBUST else 0):
         if keep.sum() < 8:
             return None
         slope, icpt = np.polyfit(ys[keep], mid[keep], 1)
