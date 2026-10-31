@@ -471,6 +471,10 @@ class Worker(threading.Thread):
             samples += self.learn_turns(LEARN_SPEED, 2, s1)
             rig.scan_to(s0)
         th, ss, ang, x = (np.array([r[i] for r in samples]) for i in range(4))
+        import csv, os
+        os.makedirs(DATA_DIR, exist_ok=True)
+        with open(os.path.join(DATA_DIR, time.strftime("learn_%Y%m%d_%H%M%S.csv")), "w", newline="") as fh:
+            w = csv.writer(fh); w.writerow(["theta_deg", "scan_mm", "angle_deg", "x_px"]); w.writerows(samples)
         model = kayei.WobbleModel().fit(th, ss, ang, x)
         self.kayei = kayei.Predictor(model, g_al, z_al, float(np.mean(a_g)), float(np.mean(x_z)), x_per_g_at)
         self.log("kayEi model: " + model.describe())
@@ -493,13 +497,21 @@ class Worker(threading.Thread):
         th0 = h.position(fa.ROT); clk.sync(th0)
         v_rot, v_scan = h.velocity(fa.ROT), rig.scan.qVEL()["1"]
         tr = kayei.AxisTracker(pred, clk, None, fa.HYDRA_IP, rig.z, rate=50.0,
-                               gonio_lead=kayei.gonio_lead(rot_speed), z_lead=kayei.Z_LEAD, gonio_axis=fa.GONIO,
+                               gonio_lead=kayei.gonio_lead(rot_speed), z_lead=kayei.gonio_lead(rot_speed), gonio_axis=fa.GONIO,
                                scan_dev=rig.scan, sweep=scan)
         n, lost, t_sync = 0, 0, time.time()
         try:
+            # pre-position: tracker first (clock stands still -> targets for the current angle),
+            # let goniometer and Z settle, THEN start the rotation. No start transient for the
+            # residual table to learn; learning is enabled only after the first full turn anyway.
+            clk.w = 0.0
+            tr.start()
+            time.sleep(0.6)
+            clk.w = rot_speed
+            clk.sync(h.position(fa.ROT))
             h.set_velocity(fa.ROT, rot_speed)
             h.move_abs(fa.ROT, AXES["rotation"][3])
-            tr.start()
+            th_learn_from = th0 + 360.0
             self.log(f"{mode}: rotation {rot_speed} deg/s, lead {kayei.gonio_lead(rot_speed) * 1000:.0f} ms"
                      + (f", scan {scan[0]}..{scan[1]} mm at {scan[2]} mm/s" if scan else "")
                      + f", residual learning {'on' if self.kayei_ilc else 'off'}")
@@ -531,7 +543,7 @@ class Worker(threading.Thread):
                         raise RuntimeError("fiber lost from the image")
                     continue
                 lost = 0
-                if self.kayei_ilc:
+                if self.kayei_ilc and th_f >= th_learn_from:
                     pred.seen(th_f, m["angle"], m["x"], s)
             raise Aborted
         finally:

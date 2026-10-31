@@ -17,7 +17,7 @@ import numpy as np
 
 FRAME_DELAY = 0.030    # s between the exposure (mid) and the encoder reading taken after the frame (measured)
 GONIO_LEAD = 0.100     # s: command the goniometer for the angle this far ahead (58 ms first response + travel)
-Z_LEAD = 0.060         # s: same for Z (PI MOV ~16 ms + stage)
+Z_LEAD = 0.035         # s: Z measured like the goniometer (58 ms response, 60-70 ms sine lag) -> same lead law
 ILC_BINS = 72          # 5 deg bins
 ILC_GAIN = 0.3         # fraction of the seen residual written into the table per visit
 TRIM_GAIN = 0.03       # integral trim per frame
@@ -39,8 +39,8 @@ class RotClock:
 
 class WobbleModel:
     def __init__(self):
-        self.ca = None   # [a0, A1, A2]
-        self.cx = None   # [b0, b1, B1, B2, C1, C2] (b1, C1, C2 = 0 when learned at one scan position)
+        self.ca = None   # [a0, a1, A1, A2, D1, D2]: a0 + a1 s + (A1 + D1 s) cos + (A2 + D2 s) sin
+        self.cx = None   # [b0, b1, B1, B2, C1, C2]  (s-terms are 0 when learned at one scan position)
         self.rms = (np.nan, np.nan)
 
     @staticmethod
@@ -55,27 +55,30 @@ class WobbleModel:
     def fit(self, th, s, angle, x):
         th, s, angle, x = (np.asarray(v, float) for v in (th, s, angle, x))
         with_s = np.ptp(s) > 1.0
-        Aa = self._basis(th, s, False)
-        self.ca = np.linalg.lstsq(Aa, angle, rcond=None)[0]
-        Ax = self._basis(th, s, with_s)
-        cx = np.linalg.lstsq(Ax, x, rcond=None)[0]
-        self.cx = np.array([cx[0], cx[3] if with_s else 0, cx[1], cx[2],
-                            cx[4] if with_s else 0, cx[5] if with_s else 0])
-        self.rms = (float((angle - Aa @ self.ca).std()), float((x - Ax @ cx).std()))
+        A = self._basis(th, s, with_s)
+        def solve(y):
+            c = np.linalg.lstsq(A, y, rcond=None)[0]
+            full = np.array([c[0], c[3] if with_s else 0, c[1], c[2], c[4] if with_s else 0, c[5] if with_s else 0])
+            return full, float((y - A @ c).std())
+        self.ca, ra = solve(angle)
+        self.cx, rx = solve(x)
+        self.rms = (ra, rx)
         return self
 
     def predict(self, th, s):
         """(angle deg, x px) the camera would see with goniometer / Z at their learning positions"""
         c, k = np.cos(np.radians(th)), np.sin(np.radians(th))
+        a0, a1, A1, A2, D1, D2 = self.ca
         b0, b1, B1, B2, C1, C2 = self.cx
-        return (self.ca[0] + self.ca[1] * c + self.ca[2] * k,
+        return (a0 + a1 * s + (A1 + D1 * s) * c + (A2 + D2 * s) * k,
                 b0 + b1 * s + (B1 + C1 * s) * c + (B2 + C2 * s) * k)
 
     def describe(self):
-        amp_a = np.hypot(self.ca[1], self.ca[2])
+        amp_a = np.hypot(self.ca[2], self.ca[3])
         amp_x = np.hypot(self.cx[2], self.cx[3])
-        return (f"angle {amp_a:.3f} deg sine (mean {self.ca[0]:+.3f}), offset {amp_x:.1f} px sine "
-                f"(mean {self.cx[0]:+.1f}, {self.cx[1]:+.3f} px/mm, amplitude change {np.hypot(self.cx[4], self.cx[5]):.2f} px/mm); "
+        return (f"angle {amp_a:.3f} deg sine (mean {self.ca[0]:+.3f}, {self.ca[1]:+.4f} deg/mm, amplitude change "
+                f"{np.hypot(self.ca[4], self.ca[5]):.4f} deg/mm), offset {amp_x:.1f} px sine (mean {self.cx[0]:+.1f}, "
+                f"{self.cx[1]:+.3f} px/mm, amplitude change {np.hypot(self.cx[4], self.cx[5]):.2f} px/mm); "
                 f"fit residual {self.rms[0]:.4f} deg / {self.rms[1]:.2f} px")
 
 
@@ -129,19 +132,21 @@ class Predictor:
             self.xg_slope, self.xg_0 = 0.0, pts[0][1]
         self.res = residual or Residual()
         self.trim_g, self.trim_z = 0.0, 0.0
+        self._s = 0.0
 
     def x_per_g(self, s):
         return self.xg_0 + self.xg_slope * s
 
     def _dg(self, th):
         """goniometer offset from the aligned reference that makes the fiber straight at th"""
-        ang, _ = self.model.predict(th, 0.0)   # the angle does not depend on the scan position
+        ang, _ = self.model.predict(th, self._s)
         return -ang / self.a_g + self.res.get(th)[0] + self.trim_g
 
     def command(self, th_g, th_z, s):
         """goniometer target for rotation angle th_g, Z target for th_z (different leads).
         Z must also undo the image shift the goniometer tilt causes (lever arm x_per_g(s)),
         using the tilt that will be in effect when the Z target applies, i.e. _dg(th_z)."""
+        self._s = s
         dg = self._dg(th_g)
         _, x = self.model.predict(th_z, s)
         dz = -(x + self.x_per_g(s) * self._dg(th_z)) / self.x_z + self.res.get(th_z)[1] + self.trim_z
@@ -255,8 +260,9 @@ class AxisTracker(Tracker):
                 self.scan_dev.HLT("1", noraise=True)
 
     def tick_extra(self, now):
-        if self.sweep and now - self.t_scan > abs(self.scan_to - self.scan_from) / self.sweep[2] + 0.3:
+        # turnaround on the commanded timing (travel / v + settle), no PI query: a qONT costs
+        # ~32 ms and would stall the goniometer stream
+        if self.sweep and now - self.t_scan > abs(self.scan_to - self.scan_from) / self.sweep[2] + 0.4:
             lo, hi, v = self.sweep
-            if self.scan_dev.qONT()["1"]:
-                self.scan_from, self.scan_to = self.scan_to, (lo if self.scan_to == hi else hi)
-                self.scan_dev.MOV("1", self.scan_to); self.t_scan = time.time()
+            self.scan_from, self.scan_to = self.scan_to, (lo if self.scan_to == hi else hi)
+            self.scan_dev.MOV("1", self.scan_to); self.t_scan = time.time()
