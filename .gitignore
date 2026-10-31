@@ -17,3 +17,7 @@ find_result.txt
 gui_log.txt
 snapshot_*.png
 live_*.mp4
+
+# demo movies (150 MB, kept outside git)
+kayei_data/demo_*.mp4
+kayei_data/demo_run.log

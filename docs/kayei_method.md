@@ -394,6 +394,21 @@ Reading the table:
   it, section 7.2b) over the 20 mm between the two scan positions. The as-is scatter is one
   reason every mode is compared within the same sweep only.
 
+### 7.3b Demo run with movies (2026-10-31, 17:55-17:58)
+
+`kayei_record.py 200 40`: the three modes back to back at 200 deg/s with the 5-45 mm scan,
+recorded headlessly with the GUI's own view (image, fiber overlay, heads-up display, live
+charts). Movies in `kayei_data/demo_20261031_175525_{asis,align,kayei,all}.mp4` (not in
+git, 150 MB); the kayEi movie includes its 40 s learning phase.
+
+| Mode | Angle rms / max | Offset rms / max |
+|---|---|---|
+| as is | 0.43 deg / 0.76 | 186 um / 510 |
+| live align | 0.21 deg / 0.42 | 55 um / 230 |
+| **kayEi** | **0.010 deg / 0.035** | **13 um / 53** |
+
+![kayEi running](figures/demo_kayei_still.png)
+
 ### 7.4 Next steps
 
 1. ~~Z and scan axes in the same scheme~~ done (7.2b).
@@ -403,6 +418,30 @@ Reading the table:
 4. ~~Learn at two scan positions~~ done, including the lever-arm calibration at both.
 5. Open physics: the out-of-plane components (e_y, t_y) are the focus variation. No axis
    corrects them in this setup; they can at least be predicted from the same model.
+
+## 7.5 How the work was done: timeline and effort
+
+The station software, the measurements and this document were produced in three sessions
+by one person working with an AI coding agent (Claude, Anthropic; Opus 5.5 on the first two
+days, Fable 5.1 on the third) that runs commands, writes and runs code, reads the results
+and decides what to measure next. The person supplied hardware, decisions and checks.
+Timestamps below are from files, the GUI log and git; the person's own time is their estimate.
+
+| Day | Session span (first to last artifact) | What the person did | What the agent did |
+|---|---|---|---|
+| 2026-10-20 | ~21:50-23:06 (~1.3 h) | chose the goal, ran the admin network commands, verified each step | found the Hydra on the network (ARP capture), drove goniometer + rotation, homing, dynamics, camera discovery and live view, `hydra.py`, `PROJECT.md` |
+| 2026-10-30 | ~18:30-23:20 (~5 h) | installed the PI software suite, connected the two stages, swapped in a new camera and lens and focused it, named the axes, confirmed moves were safe, pressed the GUI buttons for the as-is / live-align tests, stress-tested extremes (and faulted the drive twice) | PI stages via pipython, found and fixed the swapped stage parameter sets, 4-axis test, found the fiber, edge-fit measurement, calibration, alignment at 6 angles, the GUI, live tracking (feedback), recording, home/reset, drive-fault handling, log |
+| 2026-10-31 | 15:20-18:00 (~2.7 h) | plugged in the USB hub, created the GitHub repository, two short answers (hardware safe; fiber not touched) | latency and wobble identification, goniometer and Z dynamics, kayEi design and implementation (model, clock, tracker, residual learning), two Hydra firmware traps, 30-run comparison sweep, fiber diameter, 3D/4D wobble map, demo movies, this document |
+
+- **kayEi specifically** - from the first design message (15:52) via the goniometer-only
+  proof (16:30), the first full-system run (16:59), to the finished 30-run comparison
+  (17:25): **about 1.5 hours**, of which ~1 hour was spent while the PI controllers were
+  unplugged (hub), using only the axes that were available.
+- Person's hands-on time: 10-20 __ min, 10-30 __ min, 10-31 __ min (to be filled in by
+  the person; the agent cannot measure it). Messages from the person: 10-30 about 19,
+  10-31 five.
+- Everything the agent measured is in this repository with its script and raw data; the
+  numbers in this document were not edited by hand.
 
 ## 8. Experiment log
 
@@ -422,6 +461,7 @@ Reading the table:
 | 2026-10-31 | Z dynamics (step, sine stream) | `kayei_data/z_dyn.py` | 58 ms response, 60-68 ms sine lag |
 | 2026-10-31 | kayEi full system at 100 deg/s | `kayei_data/run_20261031_17*.csv` | 0.0078 deg / 7.4 um with scan |
 | 2026-10-31 | full comparison sweep, 30 runs | `kayei_sweep.py`, `kayei_data/run_20261031_17[12]*.csv`, `sweep_20261031.log` | kayEi 0.007-0.016 deg / 8-22 um at 20-360 deg/s; feedback 0.020 -> 0.24 deg |
+| 2026-10-31 | demo run with movies, 200 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261031_175525_*.mp4` | as is 0.43 deg -> live align 0.21 -> kayEi 0.010 deg |
 | 2026-10-31 | kayEi goniometer lead sweep | `kayei_data/tracker_test.py`, `kayei_data/gonio_tracker.csv` | 0.013-0.017 deg at 200-360 deg/s |
 
 ## 9. Reproducing

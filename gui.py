@@ -618,6 +618,38 @@ def text(img, s, org, scale=0.6, color=(255, 255, 255)):
     cv2.putText(img, s, org, cv2.FONT_HERSHEY_SIMPLEX, scale, color, 1, cv2.LINE_AA)
 
 
+def compose(f, st, hist, cal, rec=False):
+    """The GUI's view: image with fiber overlay, heads-up display, live charts. Used by the
+    GUI and by the headless recorder (kayei_record.py), so movies look the same either way."""
+    h, w = f.shape
+    view = cv2.cvtColor(f, cv2.COLOR_GRAY2BGR)
+    m = st["m"]
+    um_px = 1000 / abs(cal["x_per_z"]) if cal else None
+    cv2.line(view, (w // 2, 0), (w // 2, h), (60, 60, 255), 2)
+    if m:
+        for off, col in ((0, (0, 255, 0)), (-m["width"] / 2, (0, 200, 255)), (m["width"] / 2, (0, 200, 255))):
+            x0, x1 = m["icpt"] + off, m["slope"] * h + m["icpt"] + off
+            cv2.line(view, (int(round(x0)), 0), (int(round(x1)), h), col, 2)
+    view = cv2.resize(view, (VIEW_W, int(h * VIEW_W / w)), interpolation=cv2.INTER_AREA)
+    p = st.get("pos", {})
+    if p:
+        text(view, f"ROT {p['rotation'] % 360:7.2f} deg   GONIO {p['goniometer']:+7.4f} deg   "
+                   f"Z {p['z']:7.4f} mm   SCAN {p['scan']:6.3f} mm", (12, 26))
+    if m:
+        ok = abs(m["angle"]) < fa.TOL_ANGLE and abs(m["x"]) < fa.TOL_PX
+        off = f"{m['x'] * um_px:+6.1f} um" if um_px else f"{m['x']:+6.2f} px"
+        text(view, f"fiber angle {m['angle']:+.4f} deg   offset {off}", (12, 52),
+             color=(120, 255, 120) if ok else (0, 210, 255))
+    if st.get("mode"):
+        label = (f"LIVE ALIGN  {st['fps']:4.1f} corrections/s" if st["mode"] == "LIVE align"
+                 else f"kayEi PREDICTIVE  {st['fps']:4.1f} fps" if st["mode"] == "kayEi"
+                 else f"{st['mode']}  {st['fps']:4.1f} fps")
+        text(view, label, (12, view.shape[0] - 16), 0.7, (80, 200, 255))
+    if rec and int(time.time() * 2) % 2:
+        cv2.circle(view, (VIEW_W - 24, 22), 9, (0, 0, 255), -1)
+    return np.vstack([view, draw_chart(hist, time.time(), VIEW_W, cal)])
+
+
 class App:
     def __init__(self, root):
         self.root, self.w = root, Worker()
@@ -876,36 +908,10 @@ class App:
         self.root.after(30, self.refresh)
 
     def draw(self, f, st, hist):
-        h, w = f.shape
-        view = cv2.cvtColor(f, cv2.COLOR_GRAY2BGR)
+        view = compose(f, st, hist, self.w.cal, rec=self.writer is not None)
+        self.record(view)
         m, cal = st["m"], self.w.cal
         um_px = 1000 / abs(cal["x_per_z"]) if cal else None
-        cv2.line(view, (w // 2, 0), (w // 2, h), (60, 60, 255), 2)
-        if m:
-            for off, col in ((0, (0, 255, 0)), (-m["width"] / 2, (0, 200, 255)), (m["width"] / 2, (0, 200, 255))):
-                x0, x1 = m["icpt"] + off, m["slope"] * h + m["icpt"] + off
-                cv2.line(view, (int(round(x0)), 0), (int(round(x1)), h), col, 2)
-        view = cv2.resize(view, (VIEW_W, int(h * VIEW_W / w)), interpolation=cv2.INTER_AREA)
-
-        # heads-up display (also goes into the recording)
-        p = st.get("pos", {})
-        if p:
-            text(view, f"ROT {p['rotation'] % 360:7.2f} deg   GONIO {p['goniometer']:+7.4f} deg   "
-                       f"Z {p['z']:7.4f} mm   SCAN {p['scan']:6.3f} mm", (12, 26))
-        if m:
-            ok = abs(m["angle"]) < fa.TOL_ANGLE and abs(m["x"]) < fa.TOL_PX
-            off = f"{m['x'] * um_px:+6.1f} um" if um_px else f"{m['x']:+6.2f} px"
-            text(view, f"fiber angle {m['angle']:+.4f} deg   offset {off}", (12, 52),
-                 color=(120, 255, 120) if ok else (0, 210, 255))
-        if st.get("mode"):
-            label = (f"LIVE ALIGN  {st['fps']:4.1f} corrections/s" if st["mode"] == "LIVE align"
-                     else f"kayEi PREDICTIVE  {st['fps']:4.1f} fps" if st["mode"] == "kayEi"
-                     else f"{st['mode']}  {st['fps']:4.1f} fps")
-            text(view, label, (12, view.shape[0] - 16), 0.7, (80, 200, 255))
-        if self.writer is not None and int(time.time() * 2) % 2:
-            cv2.circle(view, (VIEW_W - 24, 22), 9, (0, 0, 255), -1)
-        view = np.vstack([view, draw_chart(hist, time.time(), VIEW_W, cal)])
-        self.record(view)
 
         # side panel readouts
         if m:
