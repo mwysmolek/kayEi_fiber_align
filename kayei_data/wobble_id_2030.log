@@ -1,0 +1,14 @@
+camera gain 1
+scan 5.0 speed  30: angle amp   1.358 deg phase   -13.1 deg fit rms 0.0235  turn1->turn2 rms 0.0236  (1820 samples)
+scan 5.0 speed  30: x     amp  80.332 px phase   -10.3 deg fit rms 1.3506  turn1->turn2 rms 1.3498  (1820 samples)
+scan 5.0 speed  90: angle amp   1.358 deg phase   -11.2 deg fit rms 0.0238  turn1->turn2 rms 0.0236  (608 samples)
+scan 5.0 speed  90: x     amp  80.333 px phase    -8.4 deg fit rms 1.3551  turn1->turn2 rms 1.3489  (608 samples)
+scan 40.0 speed  30: angle amp   1.177 deg phase   -11.1 deg fit rms 0.0116  turn1->turn2 rms 0.0116  (1819 samples)
+scan 40.0 speed  30: x     amp  43.077 px phase    -8.9 deg fit rms 0.4137  turn1->turn2 rms 0.4149  (1819 samples)
+scan 40.0 speed  90: angle amp   1.177 deg phase    -9.3 deg fit rms 0.0119  turn1->turn2 rms 0.0118  (608 samples)
+scan 40.0 speed  90: x     amp  43.083 px phase    -7.0 deg fit rms 0.4273  turn1->turn2 rms 0.4230  (608 samples)
+scan 5.0 angle: phase shift +1.89 deg between 30 and 90 deg/s -> frame-to-encoder delay +31 ms
+scan 5.0 x: phase shift +1.89 deg between 30 and 90 deg/s -> frame-to-encoder delay +32 ms
+scan 40.0 angle: phase shift +1.87 deg between 30 and 90 deg/s -> frame-to-encoder delay +31 ms
+scan 40.0 x: phase shift +1.88 deg between 30 and 90 deg/s -> frame-to-encoder delay +31 ms
+offset amplitude change over 35 mm scan: cos -36.48 px, sin +7.68 px; predicted from the image angle: cos +40.01, sin -9.31

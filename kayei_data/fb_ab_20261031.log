@@ -1,0 +1,19 @@
+21:44:39  kayEi model: angle 1.171 deg sine (mean +1.115, +0.0000 deg/mm, amplitude change 0.0000 deg/mm), offset 42.2 px sine (mean +40.0, +0.000 px/mm, amplitude change 0.00 px/mm); fit residual 0.0121 deg / 0.42 px
+### FB 0.0 rep 0
+21:45:05  kayEi errors: angle rms 0.0388 max 0.1604 deg | offset rms 62.2 max 203.7 um
+### FB 0.4 rep 0
+21:45:31  kayEi errors: angle rms 0.0406 max 0.1413 deg | offset rms 60.7 max 202.3 um
+### FB 0.2 rep 0
+21:45:57  kayEi errors: angle rms 0.0371 max 0.1480 deg | offset rms 60.6 max 185.0 um
+### FB 0.0 rep 1
+21:46:23  kayEi errors: angle rms 0.0401 max 0.1626 deg | offset rms 64.0 max 190.3 um
+### FB 0.4 rep 1
+21:46:49  kayEi errors: angle rms 0.0391 max 0.1480 deg | offset rms 60.2 max 190.2 um
+### FB 0.2 rep 1
+21:47:16  kayEi errors: angle rms 0.0384 max 0.1548 deg | offset rms 61.5 max 198.8 um
+### FB 0.0 rep 2
+21:47:42  kayEi errors: angle rms 0.0391 max 0.1526 deg | offset rms 64.2 max 194.5 um
+### FB 0.4 rep 2
+21:48:08  kayEi errors: angle rms 0.0391 max 0.1514 deg | offset rms 59.2 max 183.1 um
+### FB 0.2 rep 2
+21:48:34  kayEi errors: angle rms 0.0381 max 0.1402 deg | offset rms 60.0 max 188.9 um

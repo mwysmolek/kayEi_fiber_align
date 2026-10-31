@@ -33,7 +33,9 @@ DATA_DIR = __file__.rsplit("\\", 1)[0] + "\\kayei_data"
 LEARN_SPEED = 90.0          # deg/s for the kayEi learning turns
 START_EXPOSURE_MS = fa.EXPOSURE_MS   # one place for the exposure: fiber_align.EXPOSURE_MS (kayei.FRAME_DELAY depends on it)
 TRACK_MAX_FIT_RMS = 1.5      # px; frames with a worse straight-line fit are not used for steering
-TRACK_GAIN = 0.6             # fraction of the measured error corrected per frame (live mode)
+TRACK_GAIN = 0.6             # live mode: max fraction of the measured error corrected per frame ...
+TRACK_GAIN_PER_S = 25.0      # ... limited to this loop gain (1/s): with ~60 ms loop latency the per-frame gain
+                             # must shrink as the frame rate rises (0.6 at 50 fps was unstable in Z at 66 fps)
 TRACK_TOL_ANGLE = 0.005      # deg, dead band in live mode
 TRACK_TOL_PX = 0.3
 # name: (unit, default jog step, min, max)
@@ -375,13 +377,15 @@ class Worker(threading.Thread):
                 # hold-off: right after a command the Hydra may not report "moving" yet
                 if (abs(m["angle"]) > TRACK_TOL_ANGLE and now - t_gonio > 0.1
                         and not h.is_moving(fa.GONIO)):
-                    g_cmd -= TRACK_GAIN * m["angle"] / a_g
+                    gain = min(TRACK_GAIN, TRACK_GAIN_PER_S / max(self.fps, 20.0))
+                    g_cmd -= gain * m["angle"] / a_g
                     if abs(g_cmd) > 5.1:
                         raise RuntimeError(f"goniometer would need {g_cmd:+.3f} deg")
                     h.move_abs(fa.GONIO, g_cmd)
                     t_gonio = time.time()
                 if abs(m["x"]) > TRACK_TOL_PX:
-                    z_cmd -= TRACK_GAIN * m["x"] / x_z
+                    gain = min(TRACK_GAIN, TRACK_GAIN_PER_S / max(self.fps, 20.0))
+                    z_cmd -= gain * m["x"] / x_z
                     if not 0.2 < z_cmd < 24.8:
                         raise RuntimeError(f"Z would need {z_cmd:.3f} mm")
                     rig.z.MOV("1", z_cmd)  # PI retargets a running move

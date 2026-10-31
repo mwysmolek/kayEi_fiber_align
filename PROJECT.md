@@ -159,7 +159,16 @@ repeatable), the rotation angle is known in advance, so goniometer and Z are dri
 where the fiber will be (fixed-rate tracker thread, lead ~30-45 ms), a residual table
 learns the rest, a slow trim removes drift. At 100 deg/s with scan: 0.008 deg / 7 um
 (feedback at 100 deg/s: 0.11 deg / 28 um). Full comparison 20-360 deg/s: `kayei_sweep.py`
--> `kayei_eval.py` -> docs section 7.4.
+-> `kayei_eval.py` -> docs section 7.3.
+
+Evening 2026-10-31, fiber re-clamped tilted (1.24 deg, 1.75 mm eccentric = 12x the wobble):
+the steppers turned out to execute a 50 Hz target stream as stop-and-go bursts, so the
+tracker now streams **velocity-shaped** (speed per tick = trajectory speed, `kayei.VSHAPE`),
+the residual learner is a capped **Fourier series** (the bin table wound up), the rotation
+clock filters its encoder re-syncs, and a proportional Z offset feedback was added. Result
+0.031 deg / 31 um at 100 deg/s (97.5 % removed); from 200 deg/s the goniometer's 4 deg/s is
+the limit by construction. Exposure is now 4 ms (`fiber_align.EXPOSURE_MS`, the fiber glows
+under the new lamp). Details: docs 5c, 6.7, 7.3d-f.
 
 Files: `kayei.py` (model, clock, predictor, tracker), `kayei_learn.py` (latency / wobble
 measurements), `kayei_sweep.py`, `kayei_eval.py`, data + scratch tests in `kayei_data/`.
@@ -192,10 +201,14 @@ raises the camera gain automatically, the GUI does not yet).
    Then `C:\dev\hydra\.venv\Scripts\python C:\dev\hydra\gui.py`, **Calibrate**.
 2. Demo movies exist (kayei_data/demo_20261031_175525_*.mp4, headless via kayei_record.py);
    a GUI-recorded one (Record button) is still an option for the talk.
-2b. kayEi follow-ups: lead as a function of the required axis rate (the only remaining
-    speed dependence, 360 deg/s: 0.014 deg / 21 um); 100 Hz stream at 360 deg/s; focus
-    (out-of-plane wobble, measured in docs 5b) - no axis corrects it yet; upper-edge
-    tracking instead of the centre line; fill in the person's hands-on minutes (docs 7.5).
+2b. kayEi follow-ups: the goniometer (4 deg/s, trapezoid per target, 0.034 deg ripple) is
+    the limit with the tilted fiber - look for a Hydra velocity/trajectory mode in the
+    Venus-3 manual, or test with a smaller tilt (0.1-0.4 deg, where 0.007 deg holds); focus
+    (out-of-plane wobble, docs 5b/5c) - no axis corrects it yet; upper-edge tracking instead
+    of the centre line; fill in the person's hands-on minutes (docs 7.5). Then the user's
+    plan: thinner fiber (detection limit), different optics.
+2b'. If the illumination changes again: run `kayei_data/expo_sweep.py`, set
+    `fiber_align.EXPOSURE_MS` (4 ms for the glowing fiber, 20 ms for dark-on-bright).
 2c. Evaluate any new runs with `kayei_eval.py <date-prefix>`; movies with `kayei_record.py`.
 3. Lower exposure / check what is in the chuck (1.1 mm wide: coated fiber? capillary?).
 4. Track the **upper edge** instead of the centre line (laser simulation needs the edge),

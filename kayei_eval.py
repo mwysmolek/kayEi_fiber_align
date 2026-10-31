@@ -1,6 +1,6 @@
 """Evaluate logged LIVE runs (kayei_data/run_*.csv): per run the angle / offset error after the
 first full turn, as a markdown table and a figure (docs/figures/kayei_comparison.png).
-Run:  python kayei_eval.py [date-prefix, e.g. 20261031_17]"""
+Run:  python kayei_eval.py [date-prefix, e.g. 20261031_17 | list.txt] [figure name]"""
 import csv
 import glob
 import os
@@ -45,7 +45,11 @@ def evaluate(path):
 
 def main():
     prefix = sys.argv[1] if len(sys.argv) > 1 else ""
-    files = sorted(glob.glob(os.path.join(HERE, "kayei_data", f"run_{prefix}*.csv")))  # prefix may contain glob chars
+    if prefix.endswith(".txt"):   # explicit list of run files (one basename per line)
+        files = [os.path.join(HERE, "kayei_data", l.strip()) for l in open(prefix) if l.strip()]
+    else:
+        files = sorted(glob.glob(os.path.join(HERE, "kayei_data", f"run_{prefix}*.csv")))  # prefix may contain glob chars
+    fig_name = sys.argv[2] if len(sys.argv) > 2 else "kayei_comparison.png"
     res = [evaluate(f) for f in files]
     names = {"as": "as is", "live": "live align", "kayei": "kayEi"}
     print("| Mode | Rotation | Scan | Turns evaluated | Angle rms / max [deg] | Offset rms / max [um] |")
@@ -71,7 +75,7 @@ def main():
         ax.grid(alpha=0.3, which="both"); ax.legend(fontsize=8)
     axs[0].set_title("Error after the first turn, all three LIVE modes")
     fig.tight_layout()
-    out = os.path.join(HERE, "docs", "figures", "kayei_comparison.png")
+    out = os.path.join(HERE, "docs", "figures", fig_name)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     fig.savefig(out, dpi=120)
     print(f"\nfigure: {out}")

@@ -197,6 +197,43 @@ other positions are unaffected (the wire is out of view there).
 with the circles swept by each point over a turn) and, on the right, the in-plane offset
 the camera sees against the out-of-plane offset it cannot see, both along the fiber.
 
+## 5c. A large, learnable disturbance: the fiber re-clamped off-centre and tilted (2026-10-31 evening)
+
+For the laser application the lateral position of the fiber matters more than its angle
+(the fiber has to stay in the focus), and a 0.1 deg wobble does not stress the method. So
+the wire of 7.3c was removed, the fiber was re-clamped deliberately off-centre and tilted,
+and the illumination was changed to a lamp that makes the fiber glow (bright on grey instead
+of dark on bright). The glow saturates the sensor at the old 20 ms exposure - the band fit
+then locks on the saturated halo and reports a 406 px "fiber" - so the exposure is now
+**4 ms** (`fiber_align.EXPOSURE_MS`): width 54.6 px as before, noise 0.0002 deg / 0.004 px
+per frame, 1 % saturated pixels, and the camera runs at 13.2 ms per frame instead of 20.2
+(the runs below log 66 frames/s). The frame-to-encoder delay re-measured at 4 ms exposure is
+31 ms, the same as at 20 ms (6.3), so nothing in the timing model changed.
+
+The 5-position characterisation of 5b, repeated on the new clamping
+(`fiber_wobble_map.py`, `kayei_data/wobble_map_2035_tilted.csv`,
+`docs/figures/wobble_{2d,3d}_tilted.png`, `wobble_4d_tilted.mp4`):
+
+| scan [mm] | angle amplitude [deg] | offset amplitude [um] | sine residual angle / offset |
+|---|---|---|---|
+| 5 | 1.357 | 1645 | 0.024 deg / 27 um |
+| 15 | 1.304 | 1418 | 0.021 / 20 |
+| 25 | 1.257 | 1198 | 0.018 / 15 |
+| 35 | 1.206 | 986 | 0.013 / 10 |
+| 45 | 1.151 | 780 | 0.010 / 7 |
+
+Fiber axis vs rotation axis: eccentricity at the chuck (+1282, +1186) um, tilt
+(-0.900, -0.852) deg = **1.239 deg**, straight to 4 um over 40 mm. That is 12x the angle and
+16x the offset of the morning (5b). The sine residual (last column) is now visibly
+non-sinusoidal and repeatable turn to turn (0.0239 vs 0.0236 deg in `kayei_learn.py wobble`):
+the shape of the chuck's grip, growing towards the free end - exactly what the residual
+learner in 7.1 exists for.
+
+What this amplitude demands from the axes: a 1.26 deg sine at the rotation frequency needs a
+goniometer peak rate of 2.2 deg/s at 100 deg/s, 4.4 at 200 and 7.9 at 360 deg/s - the stage
+is configured for 4 deg/s. Z needs 2.1 / 4.2 / 7.5 mm/s of its 10. So from 200 deg/s on the
+goniometer is at its limit by construction; this is the regime the evening was about.
+
 ## 6. System identification for prediction (2026-10-31)
 
 ### 6.1 Latency: command -> image
@@ -277,6 +314,49 @@ the measured ~35 ms lead brought it to 10 um (7.2b) - a 25 ms lead error at 100 
   rotation, and is the likely meaning of the 1004 errors seen the day before.
 - Fix: `Hydra.rezero_turn()` keeps the rotation count within one turn (same angle modulo
   360, so learned models stay valid) and sets the limits to +/-36000 deg explicitly.
+
+### 6.7 What a stepper does with a 50 Hz target stream (found with the large wobble)
+
+The first kayEi runs on the tilted fiber (unchanged software) gave 0.033 deg / 47 um at
+100 deg/s and 0.056 deg / 115 um at 200 deg/s - 4-5x the morning's numbers, and 2.6-4.4 % of
+the amplitude, where the morning's 0.007 deg had been 7 % of its 0.1 deg amplitude. Relative
+to the amplitude nothing had improved or degraded; the 6.4/6.5 tests had simply been made at
+amplitudes too small to show what the stages do. Streaming a 1.26 deg sine to the goniometer
+and reading the encoder (`kayei_data/gonio_shape.py`, `docs/figures/gonio_stop_and_go.png`)
+shows it: the stage moves in **bursts at 4-5 deg/s towards a stale target, stops, waits
+100-300 ms, moves again** - 28-31 % of the time standing still, lagging the command by
+100-300 ms. The controller re-plans a full trapezoid for every new target at its configured
+maximum speed, so a dense stream of small targets becomes stop-and-go. Three more facts came
+out of the same tests (`track_test.py`, `track_matrix.py`, all in `kayei_data/`):
+
+- the Hydra's command parser handles about 165 commands/s in total; polling the encoder
+  while streaming (my first test) halves the stream's effective rate and corrupts both;
+- raising the goniometer acceleration from 50 to 400 deg/s2 makes it lose steps (0.070 deg
+  after one test, open-loop stepper); 150 deg/s2 brings nothing measurable;
+- a C-663 command costs 16 ms over USB because pipython asks for the error after every
+  command; with the error check off it costs 1.1 ms (checked once per run instead).
+
+**Velocity-shaped streaming.** The fix is to tell the stage, every tick, the speed the
+trajectory needs over the next tick (x 1.15 margin, floor 0.02 deg/s and 0.05 mm/s) and the
+target one lead ahead (`setnvel` + `move` on the Hydra, `VEL` + `MOV` on the C-663), so the
+trapezoid it plans is the trajectory itself. Camera-sensed sine tracking, no controller
+polling (`kayei_data/vshape_test.py`, `docs/figures/stream_shaping.png`; "lag" includes the
+30 ms frame delay, so 30 ms means on time):
+
+| axis, sine | plain stream: lag, non-sine error | shaped, lead 60 / 40 ms | shaped, lead 120 / 80 ms |
+|---|---|---|---|
+| goniometer 1.26 deg at 0.278 Hz (= 100 deg/s) | 67 ms, 0.044 deg | 17 ms, 0.034 deg | -43 ms, 0.036 deg |
+| goniometer 1.26 deg at 0.556 Hz (= 200 deg/s) | 89 ms, 0.041 deg | 42 ms, 0.034 deg | -18 ms, 0.033 deg |
+| Z 1.2 mm at 0.278 Hz | 55 ms, 11.7 um | 39 ms, 6.5 um | -1 ms, 6.6 um |
+| Z 1.2 mm at 0.556 Hz | 63 ms, 16.2 um | 48 ms, 17.6 um | +8 ms, 17.6 um |
+
+Shaping turns the lag into a clean, lead-correctable delay (optimum lead: goniometer
+~47 ms at 100 deg/s and ~72 ms at 200, `kayei.gonio_lead`; Z ~49 / ~58 ms, `kayei.z_lead`)
+and removes a quarter of the goniometer's and half of Z's non-sine error. What remains -
+0.034 deg on the goniometer, 7-18 um on Z - is the stages' own motion ripple at these rates;
+no command strategy tried (100 Hz stream, higher acceleration) reduces it further. The
+goniometer's ripple also appears in the offset through its lever arm (-62 px/deg, 3.1): 0.03
+deg of goniometer is 40 um of fiber offset at the camera position.
 
 ## 7. kayEi: predictive alignment
 
@@ -456,15 +536,167 @@ The decisive test (wire removed, same run) is the next entry. Lesson for the set
 may hang on the fiber; a larger disturbance for testing is made by clamping the fiber
 off-centre or tilted, which rotates with it and is therefore learnable.
 
+### 7.3d The decisive wire test did not happen cleanly
+
+The wire was removed, but together with the re-clamping and the new illumination (5c), so
+the "same run without the wire" of 7.3c does not exist. What the large wobble then showed
+(6.7) is that the goniometer's stop-and-go response grows with the amplitude of what it has
+to do; the wire's degradation at the small amplitude remains explained best by the pendulum
+argument, but it is no longer separable from the actuator effect. Both lessons stand: nothing
+hangs on the fiber, and the goniometer's response had to be measured at the amplitude it is
+used at.
+
+### 7.3e kayEi on the large wobble: what had to change (2026-10-31, 20:15-21:20)
+
+Four things broke or were missing once the wobble was 12x larger, each found by a
+measurement and fixed in the code the same hour:
+
+1. **Stop-and-go actuators** (6.7): velocity-shaped streaming, new lead laws.
+2. **The residual table wound up.** As soon as the stages could follow it, the 72-bin table
+   (gain 0.3 per visit) fed its own bin-to-bin noise back as speed demands, hit the 4 deg/s
+   limit and integrated the resulting error: +/-0.7 deg and +/-1.1 mm of "learned shape" at
+   100 deg/s, errors 0.16 deg / 400 um. With learning off the same run gave 0.044 deg /
+   28 um, of which the repeatable part (turn-mean profile) was 0.036 deg / 19 um, dominated by
+   the first harmonic (0.047 deg, 20 um: a 3.8 % gain/phase mismatch between the sine model
+   and the real plant), and the non-repeatable part 0.015 deg / 13 um. The table is now a
+   **Fourier series, harmonics 1-4, amplitude-capped** (`kayei.Residual`): it can learn a
+   gain/phase error and the chuck's 3rd harmonic, and cannot wind up on noise. The learner
+   also pauses while a stage is at its speed limit, and the shaping speed includes the
+   distance to the previous target, so a correction is executed within a tick instead of
+   leaving the stage crawling behind at the floor speed (that was a second wind-up path:
+   -2.7 mm of Z trim in one run).
+3. **The rotation clock was being corrupted by its own re-sync.** Every 0.25 s the loop reads
+   the rotation encoder and re-phases the clock. The shaped stream doubles the Hydra command
+   traffic, the read's round trip jitters by tens of ms, and the timestamp error became a
+   phase jump of ~2 deg of rotation = a 0.045 deg goniometer step every 0.26 s, visible as
+   spikes in the command log (`kayei_data/ticks_*.csv`). The clock now ignores reads slower
+   than 12 ms, applies the rest with gain 0.3, and takes only corrections above 1.5 deg
+   (start-up, while the rotation accelerates: 67 deg) in full. After 3 s the corrections are
+   0.13 deg rms with ~7 of 90 reads rejected; the command stream is smooth (goniometer rate
+   never above 2.33 deg/s where the sine needs 2.2).
+4. **Offset feedback into Z.** Since the goniometer's ripple leaks into the offset through
+   the lever arm and Z tracks well, the camera's offset error is now also fed proportionally
+   (gain 0.4) into the Z command on top of the feed-forward: 35 vs 40 um in a back-to-back
+   pair at 100 deg/s (run-to-run scatter is of the same size; kept because it cannot hurt).
+
+Steady state at 100 deg/s after all four (after the first turn): **0.031 deg / 31 um** on a
+1.26 deg / 1.2 mm wobble, i.e. 97.5 % of the disturbance removed, against a measured floor of
+the stages themselves of ~0.034 deg (goniometer) and 7-18 um (Z) plus 40 um/0.03 deg of
+lever-arm leakage. The full comparison on this fiber follows in 7.3f.
+
+### 7.3f Full comparison on the tilted fiber: as is / live align / kayEi, 20-360 deg/s (2026-10-31, 21:28-21:55)
+
+Same protocol as 7.3 (`kayei_sweep.py`, 30 runs, evaluated after the first turn and the
+first 2 s with `kayei_eval.py`; the live-align runs were repeated after the gain fix below),
+on the fiber of 5c: 1.26 deg / 1.2 mm wobble at the camera position, 1.65 mm at scan 5 mm.
+`docs/figures/kayei_comparison_tilted.png`:
+
+| Mode | Rotation | Scan | Turns evaluated | Angle rms / max [deg] | Offset rms / max [um] |
+|---|---|---|---|---|---|
+| as is | 20 deg/s | no | 2 | 0.9030 / 1.813 | 848.1 / 1679 |
+| kayEi | 20 deg/s | no | 3 | 0.0283 / 0.107 | 19.2 / 72 |
+| as is | 20 deg/s | yes | 2 | 0.7763 / 1.485 | 525.3 / 897 |
+| kayEi | 20 deg/s | yes | 3 | 0.0325 / 0.099 | 19.3 / 80 |
+| as is | 50 deg/s | no | 4 | 1.2284 / 2.189 | 1433.7 / 2558 |
+| kayEi | 50 deg/s | no | 4 | 0.0367 / 0.110 | 52.3 / 143 |
+| as is | 50 deg/s | yes | 4 | 1.5221 / 2.485 | 1457.9 / 2777 |
+| kayEi | 50 deg/s | yes | 4 | 0.0364 / 0.115 | 21.9 / 79 |
+| as is | 100 deg/s | no | 7 | 1.4767 / 2.439 | 1360.4 / 2231 |
+| kayEi | 100 deg/s | no | 7 | 0.0818 / 0.557 | 127.0 / 792 |
+| as is | 100 deg/s | yes | 6 | 1.1781 / 2.094 | 811.4 / 1670 |
+| kayEi | 100 deg/s | yes | 7 | 0.0323 / 0.099 | 28.0 / 91 |
+| as is | 200 deg/s | no | 13 | 1.0349 / 1.785 | 1043.2 / 1799 |
+| kayEi | 200 deg/s | no | 13 | 0.0790 / 0.205 | 150.8 / 363 |
+| as is | 200 deg/s | yes | 13 | 1.1439 / 2.040 | 869.0 / 1867 |
+| kayEi | 200 deg/s | yes | 13 | 0.0595 / 0.217 | 87.3 / 332 |
+| as is | 360 deg/s | no | 24 | 1.3545 / 2.283 | 1373.8 / 2305 |
+| kayEi | 360 deg/s | no | 23 | 0.6993 / 1.414 | 1306.2 / 2553 |
+| as is | 360 deg/s | yes | 23 | 0.9395 / 1.656 | 781.5 / 1623 |
+| kayEi | 360 deg/s | yes | 24 | 0.6636 / 1.283 | 1085.7 / 2085 |
+| live align | 20 deg/s | no | 2 | 0.0915 / 0.167 | 18.7 / 64 |
+| live align | 20 deg/s | yes | 3 | 0.0863 / 0.165 | 14.9 / 72 |
+| live align | 50 deg/s | no | 4 | 0.2306 / 0.395 | 32.9 / 107 |
+| live align | 50 deg/s | yes | 4 | 0.2201 / 0.368 | 24.4 / 82 |
+| live align | 100 deg/s | no | 6 | 0.4943 / 0.829 | 77.3 / 299 |
+| live align | 100 deg/s | yes | 5 | 0.4896 / 0.806 | 460.3 / 2852 |
+| live align | 200 deg/s | no | 1 | 0.8668 / 1.415 | 1045.7 / 3268 |
+| live align | 200 deg/s | yes | 2 | 0.8930 / 1.347 | 1867.5 / 3834 |
+| live align | 360 deg/s | no | 3 | 0.9377 / 1.520 | 1834.9 / 3448 |
+| live align | 360 deg/s | yes | 2 | 0.9952 / 1.582 | 965.7 / 2030 |
+
+Reading the table:
+
+- **As is** is the disturbance itself: 0.8-1.5 deg and 0.5-1.5 mm rms (the rms includes
+  the mean, because "as is" aligns once at an arbitrary angle).
+- **Live align** (feedback) had to be re-tuned first: its per-frame gain of 0.6 was chosen at
+  50 frames/s; at the 66 frames/s of the 4 ms exposure the Z loop (60 ms latency) was
+  unstable and ran into the range limit in every run of the sweep. The gain is now limited
+  to a loop gain of 25 1/s (`TRACK_GAIN_PER_S`), 0.38 per frame at 66 fps. Even so, feedback
+  on a 1.26 deg wobble is a different world from 7.3: the goniometer runs at its 4 deg/s
+  limit in bursts and the offset follows the goniometer's lever-arm shift a loop delay late.
+- **kayEi** holds 0.03-0.04 deg and 20-50 um up to 100 deg/s, with or without scanning,
+  i.e. 97-98 % of the angle and offset removed. At 200 deg/s the goniometer needs 4.4 deg/s
+  (limit 4) and at 360 deg/s 7.9: the predictor commands the right thing, the stage cannot do
+  it, and the learner is paused while a stage is at its limit, so the error there is the
+  saturation itself. This is the first time in the project that the mechanics, not the
+  control, set the number - which is what the tilt was for.
+- One kayEi run (100 deg/s, no scan, 21:35) carries a 4 s glitch at t = 18-22 s (0.15 deg /
+  250 um, one Hydra query took 61 ms, then recovery); its row is reported as logged. The nine
+  repeats of the next paragraph give the typical value at that speed.
+
+**The remaining error and the proportional Z feedback.** The per-turn profiles
+(`docs/figures/kayei_error_composition.png`, `kayei_data/error_composition.py`) show
+what is left at 100 deg/s: with learning off 0.043 deg = 0.036 repeatable + 0.015
+non-repeatable, 25 um = 19 + 13; with the Fourier learner on 0.031 deg = 0.019 + 0.016.
+The learner removes the repeatable angle error at ~11 % per turn instead of the 26 % it
+would in simulation (`Residual` fed with its own output converges 0.031 -> 0.004 in 8
+turns): the goniometer executes only part of a small added correction - the signature of
+backlash or stiction in the worm drive, and the same mechanism that leaves 0.015 deg
+non-repeatable. The offset did not profit from the learner in the same way; nine
+interleaved runs at 100 deg/s with the proportional Z feedback gain at 0 / 0.4 / 0.2
+(`kayei_data/fb_ab_20261031.log`):
+
+| Z feedback gain | angle rms [deg], 3 runs | offset rms [um], 3 runs | mean offset |
+|---|---|---|---|
+| 0 | 0.029 / 0.032 / 0.035 | 45.3 / 46.1 / 49.7 | 47.0 um |
+| 0.4 | 0.031 / 0.032 / 0.029 | 43.6 / 45.1 / 41.6 | 43.4 um |
+| 0.2 | 0.036 / 0.029 / 0.029 | 49.4 / 42.6 / 44.5 | 45.5 um |
+
+Two more observations from these nine runs: the run-to-run scatter at fixed settings is
++/-10 % (0.029-0.036 deg, 42-50 um), and the offset level at 100 deg/s drifted upwards over
+the evening at unchanged settings (25-33 um in the 21:00-21:17 runs, 42-50 um at 21:45-21:48,
+with the angle unchanged at 0.03 deg); a slow change in the mechanics (clamping, lever arm)
+is the likely reason, and it was not chased further tonight.
+
+The feedback cannot remove the goniometer's ripple from the offset: with a 60 ms loop
+delay a proportional term amplifies the 3-10 Hz band where that ripple lives (gain 0.4:
+x1.7 at 8 Hz). **Demo movies** of this fiber at 100 deg/s with scanning (`kayei_record.py 100 40`,
+`kayei_data/demo_20261031_214849_{asis,align,kayei,all}.mp4`, not in git; still frame
+`docs/figures/demo_kayei_still_tilted.png`): as is 1.31 deg / 900 um, live align diverges
+within 10 s (Z out of range), kayEi 0.044 deg / 76 um over the whole run including its
+learning start.
+
+The conclusion for the offset - the quantity that matters for the laser - is
+in 7.4: shorten the lever arm or make the goniometer smoother; the control side is done
+with what these stages can execute.
+
 ### 7.4 Next steps
 
-1. ~~Z and scan axes in the same scheme~~ done (7.2b).
-2. ~~Residual table and trim~~ on; the table now holds +/-0.02 deg / +/-40 um of shape.
-3. Full-system evaluation: as is / live align / kayEi at 20, 50, 100, 200, 360 deg/s,
-   with and without scanning - done, 7.3.
-4. ~~Learn at two scan positions~~ done, including the lever-arm calibration at both.
-5. Open physics: the out-of-plane components (e_y, t_y) are the focus variation. No axis
+1. ~~Z and scan axes in the same scheme~~ done (7.2b). ~~Residual learning~~ on, Fourier form (7.3e).
+   ~~Learn at two scan positions~~ done. ~~Full-system evaluation~~ done twice (7.3, 7.3f).
+2. **The goniometer is the limit.** With a 1.26 deg tilt it needs 4.4 deg/s at 200 deg/s and
+   7.9 at 360 against its 4 deg/s, and even below that its trapezoid-per-target execution
+   leaves 0.034 deg of ripple (6.7). Options, in order of effort: a smaller tilt (real fibers
+   in a good chuck: 0.1-0.4 deg, where the morning's 0.007 deg holds); a Hydra motion mode
+   that takes a velocity or a trajectory instead of discrete targets (to be looked up in the
+   Venus-3 manual); a servo goniometer.
+3. Lever-arm leakage: 0.03 deg of goniometer ripple is 40 um of offset at the camera. A
+   camera position closer to the goniometer pivot (smaller `x_per_g`) or the Z feedback of
+   7.3e (gain 0.4 now; a lead-compensated version could take more) reduce it.
+4. Open physics: the out-of-plane components (e_y, t_y) are the focus variation. No axis
    corrects them in this setup; they can at least be predicted from the same model.
+5. Planned by the person: a thinner fiber (detection limit of the band fit at 20 um/px),
+   then different optics.
 
 ## 7.5 How the work was done: timeline and effort
 
@@ -478,15 +710,19 @@ Timestamps below are from files, the GUI log and git; the person's own time is t
 |---|---|---|---|
 | 2026-10-20 | ~21:50-23:06 (~1.3 h) | chose the goal, ran the admin network commands, verified each step | found the Hydra on the network (ARP capture), drove goniometer + rotation, homing, dynamics, camera discovery and live view, `hydra.py`, `PROJECT.md` |
 | 2026-10-30 | ~18:30-23:20 (~5 h) | installed the PI software suite, connected the two stages, swapped in a new camera and lens and focused it, named the axes, confirmed moves were safe, pressed the GUI buttons for the as-is / live-align tests, stress-tested extremes (and faulted the drive twice) | PI stages via pipython, found and fixed the swapped stage parameter sets, 4-axis test, found the fiber, edge-fit measurement, calibration, alignment at 6 angles, the GUI, live tracking (feedback), recording, home/reset, drive-fault handling, log |
+| 2026-10-31 evening | 19:50-22:15 (~2.4 h) | removed the wire, re-clamped the fiber off-centre and tilted, changed the illumination, two messages ("took off the wire and changed the illumination", "and induced extra angle") | new exposure, re-identification of the frame delay, 5-position map of the tilted fiber, found the stop-and-go actuator response and the Hydra parser limit, velocity-shaped streaming, Fourier residual learner, rotation-clock filter, offset feedback, live-align gain fix, second 30-run comparison, demo movies, sections 5c, 6.7, 7.3d-f |
 | 2026-10-31 | 15:20-18:00 (~2.7 h) | plugged in the USB hub, created the GitHub repository, two short answers (hardware safe; fiber not touched) | latency and wobble identification, goniometer and Z dynamics, kayEi design and implementation (model, clock, tracker, residual learning), two Hydra firmware traps, 30-run comparison sweep, fiber diameter, 3D/4D wobble map, demo movies, this document |
 
 - **kayEi specifically** - from the first design message (15:52) via the goniometer-only
   proof (16:30), the first full-system run (16:59), to the finished 30-run comparison
   (17:25): **about 1.5 hours**, of which ~1 hour was spent while the PI controllers were
   unplugged (hub), using only the axes that were available.
+- **kayEi on the large wobble** (7.3e) - from the first failed run (20:38) through the actuator
+  tests to the configuration that holds 0.031 deg / 31 um (21:12): **35 minutes**, four
+  root causes found by measurement and fixed in the code.
 - Person's hands-on time: 10-20 __ min, 10-30 __ min, 10-31 __ min (to be filled in by
   the person; the agent cannot measure it). Messages from the person: 10-30 about 19,
-  10-31 five.
+  10-31 five, 10-31 evening two.
 - Everything the agent measured is in this repository with its script and raw data; the
   numbers in this document were not edited by hand.
 
@@ -510,14 +746,30 @@ Timestamps below are from files, the GUI log and git; the person's own time is t
 | 2026-10-31 | full comparison sweep, 30 runs | `kayei_sweep.py`, `kayei_data/run_20261031_17[12]*.csv`, `sweep_20261031.log` | kayEi 0.007-0.016 deg / 8-22 um at 20-360 deg/s; feedback 0.020 -> 0.24 deg |
 | 2026-10-31 | demo run with movies, 200 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261031_175525_*.mp4` | as is 0.43 deg -> live align 0.21 -> kayEi 0.010 deg |
 | 2026-10-31 | hanging-wire diagnosis (A/B tests) | `kayei_data/run_20261031_18[5]*`, `run_20261031_19*` | software excluded; pendulum on the tilting stage |
+| 2026-10-31 ev. | exposure for the glowing fiber | `kayei_data/expo_sweep.py`, `illum_{20,4}ms.png` | 20 ms saturated (406 px false width); 4 ms: 54.6 px, 0.0002 deg noise |
+| 2026-10-31 ev. | frame-to-encoder delay at 4 ms exposure | `kayei_learn.py wobble`, `kayei_data/wobble_2030_tilted.csv` | 31 ms (30 at 20 ms exposure) |
+| 2026-10-31 ev. | tilted fiber, 5-position map | `fiber_wobble_map.py`, `kayei_data/wobble_map_2035_tilted.csv`, figures `*_tilted` | ecc. (+1282, +1186) um, tilt 1.239 deg, straight to 4 um; 1.36 deg / 1.65 mm at 5 mm |
+| 2026-10-31 ev. | kayEi unchanged on the tilted fiber | `kayei_data/run_20261031_2039*` | 0.033 deg / 47 um at 100, 0.056 / 115 at 200 deg/s |
+| 2026-10-31 ev. | stage response to a 50 Hz target stream | `kayei_data/track_test.py`, `track_matrix.py`, `gonio_shape.py`, `docs/figures/gonio_stop_and_go.png` | stop-and-go bursts, 28-31 % standing; parser ~165 cmd/s; accel 400 loses steps; C-663 16 -> 1 ms per command |
+| 2026-10-31 ev. | plain vs velocity-shaped streaming | `kayei_data/vshape_test.py`, `docs/figures/stream_shaping.png` | non-sine 0.044 -> 0.034 deg, 11.7 -> 6.5 um; leads 47/72 ms gonio, 49/58 ms Z |
+| 2026-10-31 ev. | learner wind-up, Fourier learner, clock filter, Z feedback | `kayei_data/run_20261031_20[5]*`, `run_20261031_21[01]*`, `ticks_*`, `syncs_*` | bin table +/-0.7 deg -> 0.16 deg; Fourier + filters 0.031 deg / 31 um at 100 deg/s |
+| 2026-10-31 ev. | Z feedback gain A/B/A, 9 runs at 100 deg/s | `kayei_data/run_20261031_214[5-8]*`, `fb_ab_20261031.log` | 47.0 / 43.4 / 45.5 um for gain 0 / 0.4 / 0.2 |
+| 2026-10-31 ev. | demo movies, tilted fiber, 100 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261031_214849_*.mp4` | as is 1.31 deg -> live align diverges -> kayEi 0.044 deg / 76 um |
+| 2026-10-31 ev. | second comparison sweep, tilted fiber (30 runs) | `kayei_sweep.py`, `kayei_data/eval_evening_list.txt`, `sweep_20261031_evening.log`, `live_rerun_20261031.log` | kayEi 0.03 deg / 20-50 um to 100 deg/s; goniometer-limited from 200 deg/s (7.3f) |
 | 2026-10-31 | kayEi goniometer lead sweep | `kayei_data/tracker_test.py`, `kayei_data/gonio_tracker.csv` | 0.013-0.017 deg at 200-360 deg/s |
 
 ## 9. Reproducing
 
 ```
+C:\dev\hydra\.venv\Scripts\python fiber_diameter.py          # 3.1
+C:\dev\hydra\.venv\Scripts\python fiber_wobble_map.py        # 5b, 5c (REPLOT=1 to re-analyse)
 C:\dev\hydra\.venv\Scripts\python kayei_learn.py latency     # 6.1
 C:\dev\hydra\.venv\Scripts\python kayei_learn.py wobble      # 6.2, 6.3
+C:\dev\hydra\.venv\Scripts\python kayei_data\vshape_test.py   # 6.7 (stage streaming)
 C:\dev\hydra\.venv\Scripts\python gui.py                     # sections 4, 5, 7 (LIVE modes)
+C:\dev\hydra\.venv\Scripts\python kayei_sweep.py             # 7.3 / 7.3f (30 runs, ~20 min)
+C:\dev\hydra\.venv\Scripts\python kayei_eval.py 20261031_2   # table + figure from the logged runs
+C:\dev\hydra\.venv\Scripts\python kayei_record.py 100 40     # 7.3b demo movies
 ```
 
 Raw data in `kayei_data/`, figures in `docs/figures/`. Hardware must be homed first

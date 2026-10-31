@@ -1,0 +1,73 @@
+21:40:17  camera gain 1
+21:40:17  connected: camera, Hydra (gonio + rotation), PI Z + scan
+
+### LIVE align 20 deg/s
+21:40:20  calibration: a_per_g -1.0071, x_per_g -65.8927, a_per_z -0.0110, x_per_z -50.4751
+21:40:21  LIVE align: rotation 20.0 deg/s
+21:41:02  LIVE align ended after 41.5 s, 1955 frames (47.1/s), rotation at 960.9 deg
+21:41:02  LIVE align errors: angle rms 0.0897 max 0.1672 deg | offset rms 18.2 max 74.4 um
+21:41:02  run logged: run_20261031_214102_live_20dps.csv (1955 frames)
+21:41:02  live: stopped
+
+### LIVE align 20 deg/s + scan
+21:41:04  LIVE align: rotation 20.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+21:41:49  LIVE align ended after 44.4 s, 2169 frames (48.8/s), rotation at 1115.6 deg
+21:41:49  LIVE align errors: angle rms 0.0837 max 0.1649 deg | offset rms 14.4 max 69.9 um
+21:41:49  run logged: run_20261031_214149_live_20dps_scan.csv (2169 frames)
+21:41:49  live: stopped
+
+### LIVE align 50 deg/s
+21:41:51  LIVE align: rotation 50.0 deg/s
+21:42:20  LIVE align ended after 29.4 s, 1291 frames (44.0/s), rotation at 1466.7 deg
+21:42:20  LIVE align errors: angle rms 0.2267 max 0.3948 deg | offset rms 31.9 max 104.3 um
+21:42:20  run logged: run_20261031_214220_live_50dps.csv (1291 frames)
+21:42:20  live: stopped
+
+### LIVE align 50 deg/s + scan
+21:42:22  LIVE align: rotation 50.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+21:42:51  LIVE align ended after 29.3 s, 1309 frames (44.6/s), rotation at 1456.8 deg
+21:42:51  LIVE align errors: angle rms 0.2181 max 0.3779 deg | offset rms 25.3 max 92.5 um
+21:42:51  run logged: run_20261031_214251_live_50dps_scan.csv (1309 frames)
+21:42:51  live: stopped
+
+### LIVE align 100 deg/s
+21:42:53  LIVE align: rotation 100.0 deg/s
+21:43:17  LIVE align ended after 24.4 s, 988 frames (40.5/s), rotation at 2381.2 deg
+21:43:17  LIVE align errors: angle rms 0.4901 max 0.8292 deg | offset rms 75.3 max 290.1 um
+21:43:17  run logged: run_20261031_214317_live_100dps.csv (988 frames)
+21:43:17  live: stopped
+
+### LIVE align 100 deg/s + scan
+21:43:19  LIVE align: rotation 100.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+21:43:37  LIVE align ended after 17.9 s, 707 frames (39.5/s), rotation at 1937.7 deg
+21:43:37  LIVE align errors: angle rms 0.4781 max 0.8060 deg | offset rms 418.2 max 2768.6 um
+21:43:37  run logged: run_20261031_214337_live_100dps_scan.csv (707 frames)
+21:43:37  live: ERROR Z would need -0.380 mm
+
+### LIVE align 200 deg/s
+21:43:42  LIVE align: rotation 200.0 deg/s
+21:43:45  LIVE align ended after 3.1 s, 99 frames (32.0/s), rotation at 613.4 deg
+21:43:45  LIVE align errors: angle rms 0.8668 max 1.4151 deg | offset rms 1015.1 max 3172.3 um
+21:43:45  run logged: run_20261031_214345_live_200dps.csv (99 frames)
+21:43:45  live: ERROR Z would need 25.514 mm
+
+### LIVE align 200 deg/s + scan
+21:43:49  LIVE align: rotation 200.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+21:43:54  LIVE align ended after 4.8 s, 155 frames (32.6/s), rotation at 1060.8 deg
+21:43:54  LIVE align errors: angle rms 0.8366 max 1.3467 deg | offset rms 1341.4 max 3722.1 um
+21:43:54  run logged: run_20261031_214354_live_200dps_scan.csv (155 frames)
+21:43:54  live: ERROR Z would need 26.521 mm
+
+### LIVE align 360 deg/s
+21:43:58  LIVE align: rotation 360.0 deg/s
+21:44:01  LIVE align ended after 3.5 s, 109 frames (31.2/s), rotation at 1339.6 deg
+21:44:01  LIVE align errors: angle rms 1.0786 max 1.7971 deg | offset rms 963.0 max 3346.9 um
+21:44:01  run logged: run_20261031_214401_live_360dps.csv (109 frames)
+21:44:01  live: ERROR Z would need 25.796 mm
+
+### LIVE align 360 deg/s + scan
+21:44:06  LIVE align: rotation 360.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+21:44:08  LIVE align ended after 2.3 s, 60 frames (25.8/s), rotation at 839.7 deg
+21:44:08  LIVE align errors: angle rms 0.9952 max 1.5820 deg | offset rms 937.5 max 1970.9 um
+21:44:08  run logged: run_20261031_214408_live_360dps_scan.csv (60 frames)
+21:44:08  live: ERROR Z would need 0.190 mm
