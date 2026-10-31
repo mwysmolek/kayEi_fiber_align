@@ -190,9 +190,13 @@ raises the camera gain automatically, the GUI does not yet).
 1. Start: Hydra power-cycled? -> GUI **Home all Hydra** (or `python hydra.py 172.20.5.201 --home`).
    Camera power-cycled? -> `python gige_forceip.py 00:06:BE:11:70:BA 172.20.5.20`.
    Then `C:\dev\hydra\.venv\Scripts\python C:\dev\hydra\gui.py`, **Calibrate**.
-2. Record the demo movie (Record -> AS IS -> Live align -> kayEi -> Stop rec).
-2b. kayEi: evaluate the sweep (docs 7.4); camera gain fallback in the GUI; lead as a
-    function of the required axis rate; focus (out-of-plane wobble) prediction.
+2. Demo movies exist (kayei_data/demo_20261031_175525_*.mp4, headless via kayei_record.py);
+   a GUI-recorded one (Record button) is still an option for the talk.
+2b. kayEi follow-ups: lead as a function of the required axis rate (the only remaining
+    speed dependence, 360 deg/s: 0.014 deg / 21 um); 100 Hz stream at 360 deg/s; focus
+    (out-of-plane wobble, measured in docs 5b) - no axis corrects it yet; upper-edge
+    tracking instead of the centre line; fill in the person's hands-on minutes (docs 7.5).
+2c. Evaluate any new runs with `kayei_eval.py <date-prefix>`; movies with `kayei_record.py`.
 3. Lower exposure / check what is in the chuck (1.1 mm wide: coated fiber? capillary?).
 4. Track the **upper edge** instead of the centre line (laser simulation needs the edge),
    decide which image side is "upper" with the camera rotated 90 deg (or rotate the camera).
