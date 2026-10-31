@@ -132,6 +132,45 @@ stays flat. Bottom: with feedback the errors stay inside the tolerance band and 
 goniometer does the sine instead. Feedback is good at low speed and degrades with speed:
 it only *reacts*, so with a loop delay tau the error grows like (wobble rate x tau).
 
+## 5b. The uncontrolled motion in 2D, 3D and 4D (2026-10-31)
+
+`fiber_wobble_map.py`: goniometer and Z fixed (aligned once at scan position 25 mm), two
+turns at 60 deg/s at scan positions 5, 15, 25, 35, 45 mm, every frame measured
+(`kayei_data/wobble_map.csv`, ~600 frames per position).
+
+| Scan position | Angle sine | Offset sine | Sine residual |
+|---|---|---|---|
+| 5 mm | 0.488 deg | 420 um | 0.006 deg / 2 um |
+| 15 mm | 0.438 deg | 342 um | 0.006 deg / 2 um |
+| 25 mm | 0.387 deg | 272 um | 0.006 deg / 2 um |
+| 35 mm | 0.337 deg | 211 um | 0.003 deg / 2 um |
+| 45 mm | 0.284 deg | 158 um | 0.005 deg / 2 um |
+
+![2D](figures/wobble_2d.png)
+
+**3D from one camera.** The camera sees one lateral component of the fiber, but over a
+turn the sine's cosine and sine coefficients at a scan position are the two components of
+the fiber axis offset in the rotating frame, (e_x, e_y)(s) = (B1, -B2)(s): the in-plane
+part and the out-of-plane part (towards the camera, i.e. the focus direction) that no
+single frame shows. Five scan positions give the fiber's centre line in 3D relative to the
+rotation axis (`kayei_data/wobble_map_axis.csv`):
+
+- eccentricity at the chuck (s = 0): (-255, +366) um; tilt (+0.254, -0.287) deg,
+  **0.383 deg total**; the fiber axis crosses the rotation axis at about s = 70 mm
+  (the offset amplitude falls from 420 to 158 um along the scan).
+- the five points lie on a straight line within **5 / 4 um** rms. The gentle bend shows
+  more clearly in the angle data: the local angle amplitude falls 0.49 -> 0.28 deg along
+  the fiber, i.e. a curvature of 9e-5 rad/mm, radius about 11 m, sagitta ~18 um over
+  40 mm - consistent with the 5 um straight-line residual after the linear fit.
+- the offset phase turns by 12 deg along the scan: eccentricity and tilt vectors are not
+  parallel, so the swept surface is a one-sheet hyperboloid, not a cone.
+
+![3D](figures/wobble_3d.png)
+
+**4D.** `docs/figures/wobble_4d.mp4` shows the reconstructed axis rotating in 3D (left,
+with the circles swept by each point over a turn) and, on the right, the in-plane offset
+the camera sees against the out-of-plane offset it cannot see, both along the fiber.
+
 ## 6. System identification for prediction (2026-10-31)
 
 ### 6.1 Latency: command -> image
@@ -376,6 +415,7 @@ Reading the table:
 | 2026-10-30 | as is vs live align | `gui.py`, `gui_log.txt` | 0.27-0.41 -> 0.021 deg; 150-182 -> 9.7 um |
 | 2026-10-30 | live align vs speed | `gui_log.txt` | 0.021 / 0.039 / 0.111 deg at 20 / 50 / 100 deg/s |
 | 2026-10-31 | image scale + fiber diameter | `fiber_diameter.py`, `kayei_data/fiber_diameter.csv` | 20.46 um/px (+1.8 % along the scan), 1.114 +/- 0.012 mm |
+| 2026-10-31 | uncontrolled motion map, 5 scan positions | `fiber_wobble_map.py`, `kayei_data/wobble_map*.csv` | 3D fiber axis: ecc. (-255, +366) um, tilt 0.383 deg, straight within 5 um |
 | 2026-10-31 | latency step test | `kayei_learn.py latency`, `kayei_data/latency.csv` | 58 ms response, 159 ms settle |
 | 2026-10-31 | wobble sine model | `kayei_learn.py wobble`, `kayei_data/wobble.csv` | residual 0.007 deg / 0.1 px, repeatable |
 | 2026-10-31 | goniometer stream tests | `kayei_data/mech_test.py` | 25-84 ms lag, full amplitude |
