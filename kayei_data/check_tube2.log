@@ -1,0 +1,26 @@
+19:41:48  camera gain 1
+19:41:48  connected: camera, Hydra (gonio + rotation), PI Z + scan
+19:41:51  calibration: a_per_g -0.9894, x_per_g -211.9220, a_per_z +0.0157, x_per_z -156.0313
+19:41:52  kayEi learn: reference gonio -0.4762 z 12.2469 at scan 20.00; 2 turns at 90 deg/s
+19:42:00  kayEi learn: scan -> 45.00 mm, calibrate + 2 turns there
+19:42:08  calibration: a_per_g -0.9933, x_per_g -145.3802, a_per_z +0.0075, x_per_z -156.1027
+19:42:22  kayEi model: angle 0.664 deg sine (mean +0.252, +0.0004 deg/mm, amplitude change 0.0084 deg/mm), offset 70.1 px sine (mean +30.5, -1.128 px/mm, amplitude change 1.04 px/mm); fit residual 0.0092 deg / 0.33 px
+19:42:22  kayEi gonio lever arm: x_per_g -265.2 +2.66*s px/deg
+
+### kayEi 100 deg/s
+19:42:24  kayEi: rotation 100.0 deg/s, leads gonio 47 / Z 49 ms (velocity-shaped), residual learning on
+19:42:48  kayEi ended after 25.5 s, 1091 frames (42.8/s); tracker 1224 ticks, 1181 gonio cmds, worst gap 35 ms, 32 slow syncs ignored, peak speeds 2.42 deg/s / 1.74 mm/s; trim gonio -0.0013 deg z -16.5 um; residual (Fourier 1..4, 928 updates): gonio 0.0022/0.0015/0.0097/0.0029 deg, Z 11.2/3.8/7.8/2.0 um
+19:42:48  kayEi clock: 91 syncs, correction rms 6.92 deg, max 65.96 deg, 4 above 1 deg, rtt median 9.8 ms
+19:42:48  kayEi errors: angle rms 0.0118 max 0.0558 deg | offset rms 12.4 max 45.7 um
+19:42:48  run logged: run_20261101_194248_kayei_100dps.csv (1091 frames)
+19:42:48  kayEi 100 deg/s: stopped
+   frames 1091, not measured 0, centre x range -7..+7 px of +/-720
+
+### kayEi 100 deg/s + scan 5-45
+19:42:50  kayEi: rotation 100.0 deg/s, leads gonio 47 / Z 49 ms (velocity-shaped), scan 5.0..45.0 mm at 1.0 mm/s, residual learning on
+19:43:39  kayEi ended after 50.6 s, 2234 frames (44.1/s); tracker 2467 ticks, 2404 gonio cmds, worst gap 32 ms, 49 slow syncs ignored, peak speeds 1.62 deg/s / 1.97 mm/s; trim gonio +0.0173 deg z -22.3 um; residual (Fourier 1..4, 2067 updates): gonio 0.0256/0.0025/0.0031/0.0011 deg, Z 9.0/3.9/2.8/0.6 um
+19:43:39  kayEi clock: 186 syncs, correction rms 4.99 deg, max 67.77 deg, 4 above 1 deg, rtt median 8.2 ms
+19:43:39  kayEi errors: angle rms 0.0161 max 0.0488 deg | offset rms 13.9 max 46.7 um
+19:43:39  run logged: run_20261101_194339_kayei_100dps_scan.csv (2234 frames)
+19:43:39  kayEi 100 deg/s + scan 5-45: stopped
+   frames 2234, not measured 0, centre x range -7..+7 px of +/-720

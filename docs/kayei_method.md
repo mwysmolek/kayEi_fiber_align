@@ -919,6 +919,21 @@ turn, > 250 px at 0.3 mm). Fewer extension tubes would enlarge the field and the
 but leave the depth of field limited by the objective's aperture (+/- 50-60 um), still short
 of the 0.3 mm along the scan; a straighter clamping would shrink the excursion in proportion.
 
+**Shorter extension tube (19:30).** The person removed most of the tube: **152.1 +/- 0.6 px/mm =
+6.57 um/px** (0.52x), field 9.5 x 7.1 mm, rod 169.5 px = 1.114 mm. Edge blur 11-15 px (70-100 um)
+at scan 5, 15, 31 and 45 mm alike - the depth of field now covers the scan. Exposure 20 ms
+clips the background white, which takes the dust specks on the sensor window out of the edge
+thresholds: angle noise 0.0002 deg per frame against 0.003 deg with an unclipped background at
+10 ms (width then reads 3 % narrow from blooming; the backlight does not flicker: brightness
+sd 0 at every exposure). Centre noise 0.02-0.03 px = 0.15-0.2 um. Two checks, no sweep
+(`run_20261101_194248_kayei_100dps.csv`, `run_20261101_194339_kayei_100dps_scan.csv`, after
+the first turn): kayEi 100 deg/s **0.011 deg / 11.8 um**, and with the scan sweeping 5-45 mm
+**0.015 deg / 14.1 um**, every frame measured, the rod centre within +/-7 px. Against the
+6 mm lens on the same rod (0.032 deg / 14 um without scan, 0.026 / 15 with) the angle is 2-3x
+better and the offset about the same; against the long tube (6 um, no scan possible) the
+offset is 2x worse but scanning works. The lever arm is 265 px/deg, the calibration steps
+back to 1 deg / 0.5 mm.
+
 ## 8. Experiment log
 
 | Date | Experiment | Script / data | Key numbers |
@@ -954,6 +969,7 @@ of the 0.3 mm along the scan; a straighter clamping would shrink the excursion i
 | 2026-11-01 | 4D before/after, rod, 100 deg/s, scan 5-45 mm | `kayei_data/wobble_4d_after.py`, `run_20261101_173707_kayei_100dps_scan.csv`, `docs/figures/wobble_4d_after_rod.mp4` | in-plane 230 -> 18 um rms; focus +/-100 um uncorrected |
 | 2026-11-01 ev. | Olympus 4x: image scale by Z steps, noise | `kayei_data/olympus4x_*.png`, 7.8 | 425.4 px/mm = 2.351 um/px, field 3.39 x 2.54 mm, 0.016 um/frame |
 | 2026-11-01 ev. | kayEi through the 4x, 100 deg/s, in focus | `kayei_data/run_20261101_181856_kayei_100dps.csv` | 0.011 deg / 6.0 um (6 mm lens: 0.032 / 14) |
+| 2026-11-01 ev. | 4x on the short tube: scale, noise vs exposure, blur along scan, kayEi checks | `kayei_data/tube2_*.png`, `run_20261101_1942*`, `run_20261101_1943*` | 6.57 um/px; 0.011 deg / 12 um, with scan 0.015 / 14 um |
 | 2026-11-01 ev. | sweep on the 4x (30 runs) - invalid, defocus | `kayei_data/sweep_20261101_rod_4x.log`, `eval_rod_4x_20261101.txt`, `focus4x_*.png` | edge blur 17 px in focus, > 250 px at scan 5 mm; fiber lost in 8 runs |
 | 2026-11-01 | demo movies, rod, 200 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261101_172358_*.mp4` | as is 0.28 deg -> live align 0.27 -> kayEi 0.037 deg / 28 um |
 | 2026-11-01 | comparison sweep, rod (30 runs) | `kayei_sweep.py`, `kayei_data/eval_rod_20261101.txt`, `sweep_20261101_rod.log` | see 7.7 |

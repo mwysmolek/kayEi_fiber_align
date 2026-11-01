@@ -238,6 +238,12 @@ limit reached; feedback 0.035-0.29 deg. Docs 7.7.
   focused at 31; the 30-run sweep on this optic is invalid for that reason (docs 7.8). Usable in
   focus at one scan position (6 um at 100 deg/s); scanning needs a focus axis or re-focusing.
 
+- **Olympus 4x on the SHORT tube** (2026-11-01 19:30, current): 152.1 px/mm = 6.57 um/px (0.52x),
+  field 9.5 x 7.1 mm, 20 ms (background clipped white on purpose: dust specks drop out of the
+  thresholds, angle noise 0.0002 deg). Depth of field covers the 40 mm scan (blur 11-15 px
+  everywhere). kayEi 100 deg/s: 0.011 deg / 12 um, with scan 0.015 / 14 um. Lever 265 px/deg.
+  This is the working configuration; a sensor-window cleaning would allow unclipped exposures.
+
 ## Next session: more samples (thin fibers, glass capillary)
 
 The plan is to put other samples in the chuck (thinner fibers, a glass capillary) and see
