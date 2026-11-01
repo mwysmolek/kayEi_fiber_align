@@ -1,0 +1,27 @@
+=== wobble map 19:51:57
+scan 35.0: 913 frames
+scan 45.0: 913 frames
+scan  5.0: angle 1.779 deg @ -172.0 deg (resid 0.2157) | offset   1991 um @ -175.1 deg (resid 224 um)
+scan 15.0: angle 1.834 deg @ -171.9 deg (resid 0.0159) | offset   1733 um @ -175.1 deg (resid 15 um)
+scan 25.0: angle 1.838 deg @ -172.0 deg (resid 0.0146) | offset   1413 um @ -175.7 deg (resid 11 um)
+scan 35.0: angle 1.838 deg @ -173.8 deg (resid 0.0538) | offset   1096 um @ -176.5 deg (resid 8 um)
+scan 45.0: angle 1.787 deg @ -174.1 deg (resid 0.0318) | offset    765 um @ -178.5 deg (resid 4 um)
+fiber axis vs rotation axis: eccentricity at s=0 (-2163, +197) um, tilt (+1.758, -0.217) deg = 1.772 deg total; straight-line residual 19 / 5 um (bend)
+wrote wobble_2d.png, wobble_3d.png, wobble_4d.mp4
+=== kayEi checks 19:53:52
+19:54:09  calibration: a_per_g -0.9576, x_per_g -195.1368, a_per_z +0.0349, x_per_z -147.1110
+19:54:26  calibration: a_per_g -0.9463, x_per_g -244.4375, a_per_z +0.0459, x_per_z -148.0957
+19:54:40  kayEi model: angle 1.842 deg sine (mean +0.550, -0.0009 deg/mm, amplitude change 0.0007 deg/mm), offset 336.6 px sine (mean +118.2, -1.744 px/mm, amplitude change 4.87 px/mm); fit residual 0.0223 deg / 3.13 px
+19:54:40  kayEi gonio lever arm: x_per_g -256.8 +2.47*s px/deg
+### kayEi 100 deg/s
+19:55:05  kayEi ended after 25.6 s, 1649 frames (64.5/s); tracker 1231 ticks, 1202 gonio cmds, worst gap 32 ms, 35 slow syncs ignored, peak speeds 4.00 deg/s / 6.06 mm/s; trim gonio -0.0143 deg z +8.1 um; residual (Fourier 1..4, 1393 updates): gonio 0.0764/0.0039/0.0079/0.0008 deg, Z 72.5/2.6/2.2/2.6 um
+19:55:05  kayEi errors: angle rms 0.0443 max 0.1354 deg | offset rms 54.7 max 192.1 um
+19:55:05  run logged: run_20261101_195505_kayei_100dps.csv (1649 frames)
+   frames 1649, not measured 0, centre x range -28..+16 px of +/-720
+### kayEi 100 deg/s + scan 5-45
+19:55:17  kayEi ended after 11.1 s, 664 frames (59.9/s); tracker 509 ticks, 485 gonio cmds, worst gap 32 ms, 14 slow syncs ignored, peak speeds 4.00 deg/s / 10.00 mm/s; trim gonio +0.2022 deg z -90.1 um; residual (Fourier 1..4, 373 updates): gonio 0.0451/0.0211/0.0175/0.0032 deg, Z 31.3/12.2/14.7/4.9 um
+19:55:17  kayEi errors: angle rms 0.0797 max 0.3129 deg | offset rms 79.0 max 213.1 um
+19:55:17  run logged: run_20261101_195517_kayei_100dps_scan.csv (664 frames)
+19:55:17  kayEi 100 deg/s + scan 5-45: ERROR fiber lost from the image
+   frames 664, not measured 0, centre x range -23..+31 px of +/-720
+=== done 21:26:34

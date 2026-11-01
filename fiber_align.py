@@ -28,9 +28,11 @@ PX_PER_MM = 152.1  # image scale, measured with Z steps. Olympus Plan N 4x on th
 OPTICS = "Olympus Plan N 4x on short extension tube (2026-11-01 evening)"
 EDGE_ONLY = False  # True: only one fiber edge is in the frame (microscope objective): track that single
                    # transition per band; "x" is then the edge position relative to the image centre, width = nan
+GAP_MM = 0.6       # silhouette: bright gaps inside the fiber up to this width are bridged (transparent core)
 POLARITY = "auto"  # "bright": fiber brighter than background (glowing / bright rims), "dark": silhouette
                    # (opaque fiber in front of a backlight), "auto": per band, whichever contrast is larger
-EXPOSURE_MS = 20.0 # Olympus 4x short tube, backlit: 20 ms clips the background white, which takes the dust
+EXPOSURE_MS = 10.0 # transparent 0.55 mm fiber, 4x short tube, backlit: 10 ms (its dark rims are strong, no clipping
+                   # needed; 20 ms blooms 5 % of the width away). Opaque rod, same optic: 20 ms clips the background white, which takes the dust
                    # specks out of the edge thresholds (angle noise 0.0002 vs 0.003 deg unsaturated at 10 ms;
                    # width reads 3 % narrow from blooming). Long tube: 20 ms; EO 6 mm lens, same light: 2 ms. History: 4 ms for the
                    # glowing 1.1 mm fiber (2026-10-31 evening), 20 ms for its dark-on-bright light before that
@@ -92,9 +94,10 @@ def measure(frame):
         # transparent cylinder (bright rims, dim core, glints), so never threshold at the peak
         mask = col > bg + 0.3 * (pk - bg)
         if silhouette:
-            # a lamp reflection on the fiber's flank is a bright streak INSIDE the silhouette: bridge
-            # gaps shorter than 0.2 mm so the run spans the whole fiber and the outer edges are used
-            gap = max(3, int(0.2 * PX_PER_MM))
+            # bright structure INSIDE the silhouette - a lamp reflection on an opaque rod, or the bright
+            # core of a TRANSPARENT fiber between its two dark rims - is bridged so that the run spans
+            # the whole fiber and its outer edges are used (gaps up to GAP_MM)
+            gap = max(3, int(GAP_MM * PX_PER_MM))
             edges_ = np.flatnonzero(np.diff(np.r_[False, mask, False]))
             for a_, b_ in zip(edges_[1::2], edges_[2::2]):   # (end of run, start of next run)
                 if b_ - a_ <= gap:

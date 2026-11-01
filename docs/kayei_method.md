@@ -713,7 +713,8 @@ Timestamps below are from files, the GUI log and git; the person's own time is t
 |---|---|---|---|
 | 2026-10-20 | ~21:50-23:06 (~1.3 h) | chose the goal, ran the admin network commands, verified each step | found the Hydra on the network (ARP capture), drove goniometer + rotation, homing, dynamics, camera discovery and live view, `hydra.py`, `PROJECT.md` |
 | 2026-10-30 | ~18:30-23:20 (~5 h) | installed the PI software suite, connected the two stages, swapped in a new camera and lens and focused it, named the axes, confirmed moves were safe, pressed the GUI buttons for the as-is / live-align tests, stress-tested extremes (and faulted the drive twice) | PI stages via pipython, found and fixed the swapped stage parameter sets, 4-axis test, found the fiber, edge-fit measurement, calibration, alignment at 6 angles, the GUI, live tracking (feedback), recording, home/reset, drive-fault handling, log |
-| 2026-11-01 | 10:00-13:00 (~3 h) | installed the rod, built the backlight (three iterations), hand-turned the goniometer to centre, stopped two runaway homings, said when the light was final | restored camera IP and homed after the power cycle, found the dead lower switch by stepping with the camera as reference, drive-trip guard, silhouette measurement (three fixes), diameter, 5-position map, 30-run comparison, this section |
+| 2026-11-01 | 16:10-18:50 (~2.7 h) | installed the rod, built the backlight (three iterations), hand-turned the goniometer to centre, stopped two runaway homings, said when the light was final | restored camera IP and homed after the power cycle, found the dead lower switch by stepping with the camera as reference, drive-trip guard, silhouette measurement (three fixes), diameter, 5-position map, 30-run comparison, this section |
+| 2026-11-01 evening | 18:50-21:30 (~2.7 h) | swapped the lens to the 4x objective on a long, then a short extension tube, aligned the rod by GUI, reported the overlay text defect, installed the transparent fiber, called the day | scale and noise per optic, single-edge mode (written, disabled), field-scaled calibration, depth-of-field diagnosis, sweep declared invalid, short-tube checks, overlay fix, summary.md, bright-core bridging, transparent fiber map and checks, this section |
 | 2026-10-31 evening | 19:50-22:15 (~2.4 h) | removed the wire, re-clamped the fiber off-centre and tilted, changed the illumination, two messages ("took off the wire and changed the illumination", "and induced extra angle") | new exposure, re-identification of the frame delay, 5-position map of the tilted fiber, found the stop-and-go actuator response and the Hydra parser limit, velocity-shaped streaming, Fourier residual learner, rotation-clock filter, offset feedback, live-align gain fix, second 30-run comparison, demo movies, sections 5c, 6.7, 7.3d-f |
 | 2026-10-31 | 15:20-18:00 (~2.7 h) | plugged in the USB hub, created the GitHub repository, two short answers (hardware safe; fiber not touched) | latency and wobble identification, goniometer and Z dynamics, kayEi design and implementation (model, clock, tracker, residual learning), two Hydra firmware traps, 30-run comparison sweep, fiber diameter, 3D/4D wobble map, demo movies, this document |
 
@@ -934,6 +935,70 @@ better and the offset about the same; against the long tube (6 um, no scan possi
 offset is 2x worse but scanning works. The lever arm is 265 px/deg, the calibration steps
 back to 1 deg / 0.5 mm.
 
+## 7.9 Third sample: a transparent 0.55 mm fiber (2026-11-01, 19:45-19:56)
+
+The person replaced the rod by a thin transparent fiber, 4x objective on the short tube and
+backlight unchanged. Twelve minutes of machine time; the measurement needed one change, the
+characterisation worked, and the kayEi checks ran into the goniometer's speed limit.
+
+**What the camera sees.** An 84 px wide (0.55 mm) silhouette whose inside is not dark: the
+fiber acts as a cylinder lens and focuses the backlight into a bright stripe along its middle,
+so the profile is two dark rims with a bright core between them (`kayei_data/transp_{5,10,20}ms.png`).
+The silhouette fit of 7.7 took the sharper right rim alone and reported a 11.6 px (76 um)
+"fiber". The reflection bridging written for the rod (bright streaks inside the dark run shorter
+than 0.2 mm are bridged) is the same mechanism with a larger gap: `fiber_align.GAP_MM = 0.6`
+now bridges bright structure inside a silhouette up to 0.6 mm, so the run spans the whole
+fiber and its OUTER edges are fitted. On the saved frame the fit then gives 83.6 px =
+**549 um**, centre fit residual 0.24 px over 36 bands (the rod's rims gave 0.06-0.13 px: the
+core's optics still shimmer at the edges); the rod frames measure as before. Exposure 10 ms
+(`EXPOSURE_MS`): the rims are strong enough without clipping the background, and 20 ms blooms
+5 % of the width away. Width over the five scan positions and two turns each: 84.6-85.4 px
+median.
+
+**Uncontrolled motion** (`fiber_wobble_map.py`, `kayei_data/wobble_map_transp_20261101.csv`,
+`docs/figures/wobble_{2d,3d}_transp_20261101.png`, `wobble_4d_transp_20261101.mp4`):
+
+| scan [mm] | angle amplitude [deg] | offset amplitude [um] | sine residual |
+|---|---|---|---|
+| 5 | 1.838 | 2051 | 0.018 deg / 17 um (*) |
+| 15 | 1.834 | 1733 | 0.016 / 15 |
+| 25 | 1.838 | 1413 | 0.015 / 11 |
+| 35 | 1.838 | 1096 | 0.054 / 8 |
+| 45 | 1.787 | 765 | 0.032 / 4 |
+
+(*) 19 consecutive frames at theta 11-15 deg carry an angle and a position that belong to
+another phase of the turn (1.64 deg / 262 px off, width correct); with them the residual reads
+0.216 deg / 224 um, without them the table value. Axis vs rotation axis: eccentricity at the
+chuck (-2163, +197) um, tilt (+1.758, -0.217) deg = **1.772 deg**, straight-line residual
+19 / 5 um (a slight bend). This is the largest wobble so far: 1.4x the re-clamped glass fiber
+(1.24 deg, 5c), 4x the rod (0.44 deg). The sine residual, 0.015 deg, is 5x the rod's 0.003 deg
+and the same as the glass fiber's: a transparent sample's measured "shape" is partly its
+optics, as 7.7 concluded. The goniometer rate this wobble asks for is 1.84 x 2 pi x turns/s:
+3.2 deg/s at 100 deg/s, against the 4 deg/s ceiling and the 1.15x shaping margin (6.7) - the
+regime of 7.3f, not of 7.7.
+
+**kayEi, two checks, no sweep.** Learned at both scan ends as usual, then at scan 25 mm,
+100 deg/s, 25 s (`run_20261101_195505_kayei_100dps.csv`, evaluated after the first turn and
+2 s): **0.038 deg / 49 um rms** (max 0.11 deg / 160 um), every frame measured, fiber centre
+within -28..+16 px of the frame centre - against 1.84 deg / 1413 um uncontrolled, 48x / 29x.
+The tick log shows the goniometer command at 3.83 deg/s, the cap, for stretches of each turn:
+the result is goniometer-limited, like the glass fiber's 0.03 deg / 28-45 um at the same speed
+on a 1.5x smaller wobble (7.3f). The second check, 100 deg/s with the scan sweeping 5-45 mm
+(`run_20261101_195517_kayei_100dps_scan.csv`), stopped after 9.7 s at scan 34 mm: 664 frames,
+0.094 deg / 92 um over the 283 frames after the first turn, which is start-up, not steady
+state. Why it stopped is not on record - the sequence's output filter kept only the lines it
+expected and dropped the worker's message, and the headless harness then waited forever for a
+worker that had stopped; it was killed at 21:25, all axes idle, defaults restored. Lesson for
+the harness (PROJECT.md): log the raw output, time out the wait. The right test for this
+sample is 30-60 deg/s, where the goniometer has margin (1.9 deg/s at 60 deg/s); it was late.
+
+**What this sample adds.** The fit now covers the third kind of profile (glowing rims, opaque
+silhouette, transparent silhouette with a bright core) with one parameter; at 6.57 um/px a
+0.55 mm fiber is 84 px, so a 125 um fiber would still be 19 px - the thin samples planned for
+the next session are measurable with this optic. And it marks the second time the station's
+usable speed is set by the goniometer's 4 deg/s and the clamping, not by the camera or the
+controller.
+
 ## 8. Experiment log
 
 | Date | Experiment | Script / data | Key numbers |
@@ -971,6 +1036,9 @@ back to 1 deg / 0.5 mm.
 | 2026-11-01 ev. | kayEi through the 4x, 100 deg/s, in focus | `kayei_data/run_20261101_181856_kayei_100dps.csv` | 0.011 deg / 6.0 um (6 mm lens: 0.032 / 14) |
 | 2026-11-01 ev. | 4x on the short tube: scale, noise vs exposure, blur along scan, kayEi checks | `kayei_data/tube2_*.png`, `run_20261101_1942*`, `run_20261101_1943*` | 6.57 um/px; 0.011 deg / 12 um, with scan 0.015 / 14 um |
 | 2026-11-01 ev. | sweep on the 4x (30 runs) - invalid, defocus | `kayei_data/sweep_20261101_rod_4x.log`, `eval_rod_4x_20261101.txt`, `focus4x_*.png` | edge blur 17 px in focus, > 250 px at scan 5 mm; fiber lost in 8 runs |
+| 2026-11-01 ev. | transparent 0.55 mm fiber: profile, bright-core bridging | `kayei_data/transp_{5,10,20}ms.png`, `fiber_align.GAP_MM`, 7.9 | 83.6 px = 549 um, fit residual 0.24 px; 10 ms |
+| 2026-11-01 ev. | transparent fiber 5-position map | `fiber_wobble_map.py`, `kayei_data/wobble_map_transp_20261101.csv`, figures `*_transp_20261101` | tilt 1.772 deg, ecc. (-2163, +197) um, 1.84 deg / 1.4 mm at scan 25; sine residual 0.015 deg |
+| 2026-11-01 ev. | kayEi on the transparent fiber, 100 deg/s (goniometer at its cap) | `kayei_data/run_20261101_195505_kayei_100dps.csv`, `run_20261101_195517_kayei_100dps_scan.csv` | 0.038 deg / 49 um; scan run stopped after 9.7 s, cause not logged |
 | 2026-11-01 | demo movies, rod, 200 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261101_172358_*.mp4` | as is 0.28 deg -> live align 0.27 -> kayEi 0.037 deg / 28 um |
 | 2026-11-01 | comparison sweep, rod (30 runs) | `kayei_sweep.py`, `kayei_data/eval_rod_20261101.txt`, `sweep_20261101_rod.log` | see 7.7 |
 | 2026-10-31 ev. | second comparison sweep, tilted fiber (30 runs) | `kayei_sweep.py`, `kayei_data/eval_evening_list.txt`, `sweep_20261031_evening.log`, `live_rerun_20261031.log` | kayEi 0.03 deg / 20-50 um to 100 deg/s; goniometer-limited from 200 deg/s (7.3f) |

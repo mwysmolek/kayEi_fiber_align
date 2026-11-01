@@ -219,6 +219,15 @@ background, MAD clipping; a lamp reflection on the rod flank needed the last one
 kayEi 0.008-0.043 deg / 6-45 um over 20-360 deg/s with and without scan, no mechanical
 limit reached; feedback 0.035-0.29 deg. Docs 7.7.
 
+Evening: Olympus 4x objective, first on a long tube (2.35 um/px: 6 um at 100 deg/s in focus,
+but the depth of field is smaller than the rod's out-of-plane motion along the scan - sweep
+invalid, focus axis is the next hardware step), then on a short tube (6.57 um/px, scanning
+works: 0.011 deg / 12 um, with scan 0.015 / 14). Sample 3, a transparent 0.55 mm fiber: the
+fit bridges its bright core (`GAP_MM`), 549 um, exposure 10 ms; wobble 1.77 deg tilt / 2.2 mm
+eccentricity - the largest so far, 3.2 deg/s of goniometer needed at 100 deg/s; kayEi
+0.038 deg / 49 um at 100 deg/s, goniometer at its 4 deg/s cap; the scan run stopped after
+10 s for an unlogged reason. Docs 7.8, 7.9, docs/summary.md.
+
 ## Optics log
 
 - **EO 6 mm** (Edmund Optics 6 mm lens on the Baumer VCXG-15M): everything up to and including
@@ -243,8 +252,23 @@ limit reached; feedback 0.035-0.29 deg. Docs 7.7.
   thresholds, angle noise 0.0002 deg). Depth of field covers the 40 mm scan (blur 11-15 px
   everywhere). kayEi 100 deg/s: 0.011 deg / 12 um, with scan 0.015 / 14 um. Lever 265 px/deg.
   This is the working configuration; a sensor-window cleaning would allow unclipped exposures.
+  Exposure per sample on this optic: rod 20 ms (clipped), transparent 0.55 mm fiber 10 ms
+  (`fiber_align.EXPOSURE_MS`).
 
 ## Next session: more samples (thin fibers, glass capillary)
+
+Samples so far: (1) 1.1 mm glass fiber, (2) 1.1 mm opaque rod, (3) transparent 0.55 mm fiber
+(in the chuck at the end of 2026-11-01; docs 7.9). First thing to do with (3): kayEi at
+30-60 deg/s without and with scan, where its 1.84 deg wobble leaves the goniometer margin
+(the 100 deg/s check was goniometer-limited, 0.038 deg / 49 um, and the scan run stopped after
+10 s unexplained - watch `kayei_data/*.log` for the worker's message this time). Then the
+30-run sweep if wanted, re-clamp straighter if the tilt is the limit.
+
+Headless check scripts (scratchpad `check_tube2.py` pattern): write the RAW output to a log
+file (the grep filter in `transp_seq.sh` swallowed the error), and put a timeout on the
+`while w.state["busy"]` wait - two of them hung for 1.5 h with the hardware open. At the end
+of a day: kill leftover `python.exe`, then read and restore the axis defaults (rot 360 deg/s,
+gonio 4 deg/s accel 50, Z VEL 10; scratchpad `wrapup_restore.py` did that on 2026-11-01).
 
 The plan is to put other samples in the chuck (thinner fibers, a glass capillary) and see
 what the measurement and kayEi achieve. Per sample, in this order (each step ~1-5 min):
@@ -256,13 +280,15 @@ what the measurement and kayEi achieve. Per sample, in this order (each step ~1-
    `C:\dev\hydra\.venv\Scripts\python gui.py`, **Ref. PI stages**, **Calibrate**.
 2. **Exposure / detection check** (illumination or sample changed):
    `python kayei_data/expo_sweep.py` prints width, noise and saturation per exposure; set
-   `fiber_align.EXPOSURE_MS` accordingly (4 ms for the glowing 1.1 mm fiber, 20 ms for
-   dark-on-bright). The band fit needs a peak at least 40 counts above the background and a
-   width of at least 3 px: a 125 um fiber is ~6 px at 20.46 um/px, a 250 um one ~12 px. If a
+   `fiber_align.EXPOSURE_MS` accordingly (4x short tube + backlight: 20 ms rod, 10 ms transparent
+   0.55 mm fiber; EO lens: 4 ms glowing fiber, 2 ms backlit rod). The band fit needs a contrast of
+   at least 40 counts and a width of at least 3 px: a 125 um fiber is ~19 px at 6.57 um/px, a 250 um
+   one ~38 px (it was 6 / 12 px with the 6 mm lens). If a
    thin fiber is not found, raise the gain (GUI "Auto gain") or the exposure before touching
    the code; if it is found but noisy, the band fit's `BAND` (30 rows) can be made larger.
-   A glass capillary is a transparent cylinder like the 1.1 mm fiber (bright rims, dim core,
-   glints) - the outermost-edge rule should work; check `width` is stable frame to frame.
+   A transparent sample in the backlight shows two dark rims and a bright core (cylinder lens);
+   `fiber_align.GAP_MM` (0.6 mm) bridges the core so the outer rims are fitted - raise it for a
+   wider capillary; check `width` is stable frame to frame (0.55 mm fiber: 84.6-85.4 px).
 3. **Find and centre**: GUI Z scan / `find_fiber.py` if the sample is out of the frame.
 4. **Scale and diameter**: `python fiber_diameter.py` (Z steps -> px/mm, width -> mm).
 5. **Uncontrolled motion, 3D axis**: `python fiber_wobble_map.py` (5 scan positions, 2 turns
