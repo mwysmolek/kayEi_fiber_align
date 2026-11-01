@@ -25,7 +25,7 @@ ROBUST = True      # sigma-clip the bands (False = plain least squares over all 
 PX_PER_MM = 425.4  # image scale, measured with Z steps (fiber_diameter.py / 2026-11-01 edge test):
                    # Olympus Plan N 4x on the extension tube = 2.351 um/px; EO 6 mm lens was 48.9 (20.45 um/px)
 OPTICS = "Olympus Plan N 4x on extension tube (2026-11-01)"
-EDGE_ONLY = True   # True: only one fiber edge is in the frame (microscope objective): track that single
+EDGE_ONLY = False  # True: only one fiber edge is in the frame (microscope objective): track that single
                    # transition per band; "x" is then the edge position relative to the image centre, width = nan
 POLARITY = "auto"  # "bright": fiber brighter than background (glowing / bright rims), "dark": silhouette
                    # (opaque fiber in front of a backlight), "auto": per band, whichever contrast is larger
@@ -41,10 +41,8 @@ def measure_edge(frame):
     ys, xs = [], []
     for y0 in range(0, h - BAND + 1, BAND):
         col = blur[y0:y0 + BAND].mean(axis=0)
-        g = np.diff(col); i = int(np.argmax(np.abs(g[20:-20]))) + 20
-        lo_side, hi_side = col[max(0, i - 60):max(1, i - 15)], col[i + 16:i + 61]
-        if len(lo_side) < 5 or len(hi_side) < 5:
-            continue
+        g = np.diff(col); i = int(np.argmax(np.abs(g[70:-70]))) + 70   # not within 70 px of a border:
+        lo_side, hi_side = col[i - 60:i - 15], col[i + 16:i + 61]           # the plateaus must both be in the frame
         a, b = float(np.median(lo_side)), float(np.median(hi_side))
         if abs(b - a) < 40:
             continue
@@ -191,16 +189,27 @@ class Rig:
         self.z.CloseConnection(); self.h.close()
 
 
-def calibrate(rig, dg=None, dz=0.5):
+def calibrate(rig, dg=None, dz=None):
+    """Image response to the goniometer and Z (finite differences around the current position).
+    Step sizes scale with the field of view: the goniometer's lever arm shifts the image by
+    ~1.3 mm/deg, and both fiber edges must stay inside the frame (3.4 mm field with the 4x
+    objective -> 0.5 deg / 0.5 mm; 29 mm field with the 6 mm lens -> 1 deg / 0.5 mm).
+    Axes are restored even if a measurement fails."""
+    field_mm = 1440 / PX_PER_MM
     if dg is None:
-        dg = 0.3 if EDGE_ONLY else 1.0   # the lever arm shifts the image by ~1.3 mm/deg: keep the edge in a 3.4 mm field
-    """Image response to the goniometer and Z (finite differences around the current position)."""
+        dg = min(1.0, round(0.2 * field_mm / 1.3, 1))
+    if dz is None:
+        dz = min(0.5, round(0.2 * field_mm, 1))
     g0, z0 = rig.gonio(), rig.zpos()
-    m0, _ = rig.look()
-    rig.hydra_to(GONIO, g0 + dg); mg, _ = rig.look()
-    rig.hydra_to(GONIO, g0)
-    rig.z_to(z0 + dz); mz, _ = rig.look()
-    rig.z_to(z0)
+    try:
+        m0, _ = rig.look()
+        rig.hydra_to(GONIO, g0 + dg); mg, _ = rig.look()
+        rig.hydra_to(GONIO, g0)
+        rig.z_to(z0 + dz); mz, _ = rig.look()
+        if m0 is None or mg is None or mz is None:
+            raise RuntimeError(f"calibration: fiber not measured (start {m0 is not None}, gonio +{dg} deg {mg is not None}, Z +{dz} mm {mz is not None})")
+    finally:
+        rig.hydra_to(GONIO, g0); rig.z_to(z0)
     cal = {"a_per_g": (mg["angle"] - m0["angle"]) / dg, "x_per_g": (mg["x"] - m0["x"]) / dg,
            "a_per_z": (mz["angle"] - m0["angle"]) / dz, "x_per_z": (mz["x"] - m0["x"]) / dz}
     return m0, cal
