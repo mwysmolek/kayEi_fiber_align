@@ -838,6 +838,11 @@ over at 360 deg/s with scanning (Z out of range). Compared with yesterday's glas
 error with speed (0.008 -> 0.043 deg, 6 -> 45 um) is the stage ripple and backlash of 6.7
 and 7.3e scaling with the stage rate, as expected.
 
+**Demo movies** of the rod at 200 deg/s with scanning (`kayei_record.py 200 40`,
+`kayei_data/demo_20261101_172358_{asis,align,kayei,all}.mp4`, not in git; still frame
+`docs/figures/demo_kayei_still_rod.png`), whole run including kayEi's learning start:
+as is 0.28 deg / 191 um, live align 0.27 deg / 83 um, kayEi 0.037 deg / 28 um.
+
 ## 8. Experiment log
 
 | Date | Experiment | Script / data | Key numbers |
@@ -870,6 +875,7 @@ and 7.3e scaling with the stage rate, as expected.
 | 2026-11-01 | goniometer switch search (camera as reference) | this document, 7.7 | lower switch dead; upper at +5.155; centre within 0.03 deg of hand-set |
 | 2026-11-01 | rod diameter / image scale (silhouette) | `fiber_diameter.py`, `kayei_data/fiber_diameter_rod_20261101.csv` | 1.106 +/- 0.004 mm, 20.45 um/px |
 | 2026-11-01 | rod 5-position map | `fiber_wobble_map.py`, `kayei_data/wobble_map_rod_20261101.csv` | tilt 0.441 deg, ecc. (-116, +477) um, sine residual 0.003 deg / 2 um |
+| 2026-11-01 | demo movies, rod, 200 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261101_172358_*.mp4` | as is 0.28 deg -> live align 0.27 -> kayEi 0.037 deg / 28 um |
 | 2026-11-01 | comparison sweep, rod (30 runs) | `kayei_sweep.py`, `kayei_data/eval_rod_20261101.txt`, `sweep_20261101_rod.log` | see 7.7 |
 | 2026-10-31 ev. | second comparison sweep, tilted fiber (30 runs) | `kayei_sweep.py`, `kayei_data/eval_evening_list.txt`, `sweep_20261031_evening.log`, `live_rerun_20261031.log` | kayEi 0.03 deg / 20-50 um to 100 deg/s; goniometer-limited from 200 deg/s (7.3f) |
 | 2026-10-31 | kayEi goniometer lead sweep | `kayei_data/tracker_test.py`, `kayei_data/gonio_tracker.csv` | 0.013-0.017 deg at 200-360 deg/s |
