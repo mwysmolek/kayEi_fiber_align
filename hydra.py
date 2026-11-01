@@ -19,6 +19,7 @@ TEST_STEP = 1.0  # in the axis' configured unit (usually degrees for these stage
 
 class Hydra:
     def __init__(self, ip, port=PORT, timeout=3.0):
+        self.repowered = 0   # drives re-powered by move_abs (see there)
         self.sock = socket.create_connection((ip, port), timeout=timeout)
 
     def send(self, cmd):
@@ -80,6 +81,10 @@ class Hydra:
         return p
 
     def move_abs(self, axis, pos):
+        # 2026-11-01: after a power cycle a drive sometimes trips off (status 0x100) at its first
+        # move; a plain 'nm' is then silently ignored. Power it again once and count it.
+        if not self.powered(axis):
+            self.init(axis); time.sleep(1.5); self.repowered += 1
         self.send(f"{pos} {axis} nm")
 
     def move_rel(self, axis, delta):

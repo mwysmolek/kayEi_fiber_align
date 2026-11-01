@@ -24,8 +24,8 @@ BAND = 30          # rows per band for edge finding
 ROBUST = True      # sigma-clip the bands (False = plain least squares over all bands)
 POLARITY = "auto"  # "bright": fiber brighter than background (glowing / bright rims), "dark": silhouette
                    # (opaque fiber in front of a backlight), "auto": per band, whichever contrast is larger
-EXPOSURE_MS = 4.0  # 2026-10-31 evening illumination: the fiber glows (bright on grey), saturates above ~4 ms;
-                   # with the earlier dark-fiber-on-bright-background light 20 ms was needed (dim rims)
+EXPOSURE_MS = 2.0  # 2026-11-01 backlit silhouette (dark rod on a white panel): 1.5-2 ms. History: 4 ms for the
+                   # glowing 1.1 mm fiber (2026-10-31 evening), 20 ms for its dark-on-bright light before that
 
 
 def measure(frame):
@@ -37,15 +37,33 @@ def measure(frame):
     for y0 in range(0, h - BAND + 1, BAND):
         col = blur[y0:y0 + BAND].mean(axis=0)
         bg = np.median(col)
-        if POLARITY == "dark" or (POLARITY == "auto" and bg - col.min() > col.max() - bg):
-            col = 2 * bg - col          # silhouette: mirror the profile so the fiber is "bright"
+        silhouette = POLARITY == "dark" or (POLARITY == "auto" and bg - col.min() > col.max() - bg)
+        if silhouette:
+            col = 2 * bg - col          # mirror the profile so the fiber is "bright"
         pk = col.max()
         if pk - bg < 40:
             continue
         # outermost columns clearly above background = the fiber's outer edges; the fiber is a
         # transparent cylinder (bright rims, dim core, glints), so never threshold at the peak
-        above = np.flatnonzero(col > bg + 0.3 * (pk - bg))
-        l, r = int(above[0]), int(above[-1])
+        mask = col > bg + 0.3 * (pk - bg)
+        if silhouette:
+            # silhouette: the dark corners of a lamp spot are "above" too; take the run that is
+            # bounded by background on both sides and has the deepest shadow
+            edges = np.flatnonzero(np.diff(np.r_[False, mask, False]))
+            runs = [(edges[i], edges[i + 1] - 1) for i in range(0, len(edges), 2)]
+            runs = [(a, b) for a, b in runs if a >= 2 and b <= w - 3]
+            if not runs:
+                continue
+            l, r = max(runs, key=lambda ab: col[ab[0]:ab[1] + 1].max())
+            l, r = int(l), int(r)
+            # local background: a lamp spot is not flat, the global median would put the
+            # half-height thresholds at the wrong level and bend the fitted centre line
+            near = np.r_[col[max(0, l - 120):max(0, l - 10)], col[r + 10:r + 120]]
+            if len(near) >= 20:
+                bg = float(np.median(near))
+        else:
+            above = np.flatnonzero(mask)
+            l, r = int(above[0]), int(above[-1])
         if l < 2 or r > w - 3:
             continue
         # each edge at half of ITS OWN height (local rim max vs background), sub-pixel
@@ -79,7 +97,7 @@ def measure(frame):
             return None
         slope, icpt = np.polyfit(ys[keep], mid[keep], 1)
         r = mid - (slope * ys + icpt)
-        s_r = max(r[keep].std(), 0.3)
+        s_r = max(1.4826 * np.median(np.abs(r[keep] - np.median(r[keep]))), 0.3)   # MAD: a cluster of bad bands (glint) must not inflate the scale
         new_keep = keep & (np.abs(r) < 3.5 * s_r)
         if new_keep.sum() == keep.sum():
             break

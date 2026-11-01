@@ -1,0 +1,14 @@
+camera gain 1
+aligned at scan 25 mm: gonio +0.2162 z 13.2197
+scan  5.0: 914 frames
+scan 15.0: 914 frames
+scan 25.0: 913 frames
+scan 35.0: 913 frames
+scan 45.0: 913 frames
+scan  5.0: angle 0.538 deg @  -85.7 deg (resid 0.0039) | offset    460 um @ -103.9 deg (resid 3 um)
+scan 15.0: angle 0.491 deg @  -88.4 deg (resid 0.0034) | offset    376 um @ -108.1 deg (resid 2 um)
+scan 25.0: angle 0.457 deg @  -90.1 deg (resid 0.0034) | offset    300 um @ -113.4 deg (resid 2 um)
+scan 35.0: angle 0.383 deg @  -95.4 deg (resid 0.0023) | offset    233 um @ -120.0 deg (resid 2 um)
+scan 45.0: angle 0.339 deg @ -102.0 deg (resid 0.0023) | offset    176 um @ -127.6 deg (resid 1 um)
+fiber axis vs rotation axis: eccentricity at s=0 (-116, +477) um, tilt (+0.004, -0.441) deg = 0.441 deg total; straight-line residual 4 / 8 um (bend)
+wrote wobble_2d.png, wobble_3d.png, wobble_4d.mp4

@@ -19,7 +19,7 @@ from kayei_learn import Rig, SCAN_SN
 HERE = os.path.dirname(os.path.abspath(__file__))
 Z_STEPS = np.arange(-2.0, 2.01, 0.25)
 SCANS = (5.0, 25.0, 45.0)
-EXPOSURES = (20.0, 12.0)
+EXPOSURES = (fa.EXPOSURE_MS, fa.EXPOSURE_MS / 2)   # second one: no saturated background (blooming check)
 
 
 def main():
@@ -57,7 +57,7 @@ def main():
                 print(f"scan {s:4.1f} mm, {exp:3.0f} ms: {abs(k):.3f} +/- {k_err:.3f} px/mm (fit resid {resid.std():.2f} px), "
                       f"width {w_px:.2f} +/- {w_sd:.2f} px -> diameter {d_mm:.4f} +/- {d_err:.4f} mm  ({len(zs)} frames)")
                 rig.z_to(zc)
-        rig.cam.f.ExposureTime.Set(20000)
+        rig.cam.f.ExposureTime.Set(fa.EXPOSURE_MS * 1000)
         rig.scan.MOV("1", 25.0); pitools.waitontarget(rig.scan)
     finally:
         rig.z_to(z0)

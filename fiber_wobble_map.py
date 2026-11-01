@@ -40,12 +40,14 @@ def turns(rig, s, n=2):
     h.rezero_turn(fa.ROT); time.sleep(0.1)
     clk = kayei.RotClock(SPEED); th0 = h.position(fa.ROT); clk.sync(th0)
     v0 = h.velocity(fa.ROT); h.set_velocity(fa.ROT, SPEED); h.move_abs(fa.ROT, th0 + 360 * n + 30)
-    out, t_sync = [], time.time()
+    out, t_sync = [], time.time(); t_start = t_sync
     try:
         while True:
             t, m = rig.fresh(); now = time.time()
             if now - t_sync > 0.25:
                 tq = time.time(); thq = h.position(fa.ROT); clk.sync(thq, (tq + time.time()) / 2); t_sync = time.time()
+                if now - t_start > 3.0 and thq - th0 < 5.0:
+                    raise RuntimeError(f"rotation not moving (status {h.status(fa.ROT):#x}, powered {h.powered(fa.ROT)}, error {h.query('ge').strip()})")
             thf = clk.at(now - kayei.FRAME_DELAY)
             if m:
                 out.append((s, thf % 360, m["angle"], m["x"], m["width"]))
