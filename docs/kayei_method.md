@@ -843,6 +843,16 @@ and 7.3e scaling with the stage rate, as expected.
 `docs/figures/demo_kayei_still_rod.png`), whole run including kayEi's learning start:
 as is 0.28 deg / 191 um, live align 0.27 deg / 83 um, kayEi 0.037 deg / 28 um.
 
+**4D after compensation** (`kayei_data/wobble_4d_after.py`, `docs/figures/wobble_4d_after_rod.mp4`,
+still `wobble_4d_after_rod_still.png`): the fiber as the laser would see it over one turn,
+uncontrolled (left, the 5-position sine model) next to kayEi running (right): the measured
+in-plane residual from a 100 s kayEi run at 100 deg/s with the scan sweeping 5-45 mm
+(`run_20261101_173707_kayei_100dps_scan.csv`, 6465 frames binned 5 deg x 10 mm,
+turn-averaged), and the towards-camera component drawn unchanged, because no axis in this
+setup corrects the focus. In-plane rms 230 um -> 18 um (13x); the residual has no visible
+sine left, it is the stage ripple of 6.7. The focus wobble (+/-100 um here) is the obvious
+next axis.
+
 ## 8. Experiment log
 
 | Date | Experiment | Script / data | Key numbers |
@@ -875,6 +885,7 @@ as is 0.28 deg / 191 um, live align 0.27 deg / 83 um, kayEi 0.037 deg / 28 um.
 | 2026-11-01 | goniometer switch search (camera as reference) | this document, 7.7 | lower switch dead; upper at +5.155; centre within 0.03 deg of hand-set |
 | 2026-11-01 | rod diameter / image scale (silhouette) | `fiber_diameter.py`, `kayei_data/fiber_diameter_rod_20261101.csv` | 1.106 +/- 0.004 mm, 20.45 um/px |
 | 2026-11-01 | rod 5-position map | `fiber_wobble_map.py`, `kayei_data/wobble_map_rod_20261101.csv` | tilt 0.441 deg, ecc. (-116, +477) um, sine residual 0.003 deg / 2 um |
+| 2026-11-01 | 4D before/after, rod, 100 deg/s, scan 5-45 mm | `kayei_data/wobble_4d_after.py`, `run_20261101_173707_kayei_100dps_scan.csv`, `docs/figures/wobble_4d_after_rod.mp4` | in-plane 230 -> 18 um rms; focus +/-100 um uncorrected |
 | 2026-11-01 | demo movies, rod, 200 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261101_172358_*.mp4` | as is 0.28 deg -> live align 0.27 -> kayEi 0.037 deg / 28 um |
 | 2026-11-01 | comparison sweep, rod (30 runs) | `kayei_sweep.py`, `kayei_data/eval_rod_20261101.txt`, `sweep_20261101_rod.log` | see 7.7 |
 | 2026-10-31 ev. | second comparison sweep, tilted fiber (30 runs) | `kayei_sweep.py`, `kayei_data/eval_evening_list.txt`, `sweep_20261031_evening.log`, `live_rerun_20261031.log` | kayEi 0.03 deg / 20-50 um to 100 deg/s; goniometer-limited from 200 deg/s (7.3f) |
