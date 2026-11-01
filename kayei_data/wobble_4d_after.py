@@ -10,7 +10,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-UM = 20.45
+sys.path.insert(0, HERE); import fiber_align as fa
+UM = 1000 / fa.PX_PER_MM
 SCANS = np.array([5.0, 15.0, 25.0, 35.0, 45.0])
 before_csv, after_csv, tag = sys.argv[1], sys.argv[2], (sys.argv[3] if len(sys.argv) > 3 else "after")
 

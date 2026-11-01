@@ -644,7 +644,8 @@ def compose(f, st, hist, cal, rec=False):
     um_px = 1000 / abs(cal["x_per_z"]) if cal else None
     cv2.line(view, (w // 2, 0), (w // 2, h), (60, 60, 255), 2)
     if m:
-        for off, col in ((0, (0, 255, 0)), (-m["width"] / 2, (0, 200, 255)), (m["width"] / 2, (0, 200, 255))):
+        lines = ((0, (0, 255, 0)),) if not np.isfinite(m["width"]) else ((0, (0, 255, 0)), (-m["width"] / 2, (0, 200, 255)), (m["width"] / 2, (0, 200, 255)))
+        for off, col in lines:   # single-edge mode (fiber_align.EDGE_ONLY): only the tracked edge is drawn
             x0, x1 = m["icpt"] + off, m["slope"] * h + m["icpt"] + off
             cv2.line(view, (int(round(x0)), 0), (int(round(x1)), h), col, 2)
     view = cv2.resize(view, (VIEW_W, int(h * VIEW_W / w)), interpolation=cv2.INTER_AREA)

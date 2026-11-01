@@ -4,7 +4,8 @@ and with the Fourier learner on. Run: python kayei_data/error_composition.py <ru
 import csv, os, sys
 import numpy as np, matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-UM = 20.46
+import sys as _s; _s.path.insert(0, HERE); import fiber_align as _fa
+UM = 1000 / _fa.PX_PER_MM
 
 def profiles(path):
     r = list(csv.DictReader(open(path)))

@@ -22,15 +22,59 @@ TOL_PX = 1.0       # px, fiber centre vs image centre
 MAX_ITER = 8
 BAND = 30          # rows per band for edge finding
 ROBUST = True      # sigma-clip the bands (False = plain least squares over all bands)
+PX_PER_MM = 425.4  # image scale, measured with Z steps (fiber_diameter.py / 2026-11-01 edge test):
+                   # Olympus Plan N 4x on the extension tube = 2.351 um/px; EO 6 mm lens was 48.9 (20.45 um/px)
+OPTICS = "Olympus Plan N 4x on extension tube (2026-11-01)"
+EDGE_ONLY = True   # True: only one fiber edge is in the frame (microscope objective): track that single
+                   # transition per band; "x" is then the edge position relative to the image centre, width = nan
 POLARITY = "auto"  # "bright": fiber brighter than background (glowing / bright rims), "dark": silhouette
                    # (opaque fiber in front of a backlight), "auto": per band, whichever contrast is larger
-EXPOSURE_MS = 2.0  # 2026-11-01 backlit silhouette (dark rod on a white panel): 1.5-2 ms. History: 4 ms for the
+EXPOSURE_MS = 20.0 # Olympus 4x, backlit silhouette: 20 ms (background ~145). EO 6 mm lens, same light: 2 ms. History: 4 ms for the
                    # glowing 1.1 mm fiber (2026-10-31 evening), 20 ms for its dark-on-bright light before that
+
+
+def measure_edge(frame):
+    """Single-edge version of measure(): per band the strongest dark<->bright transition (sub-pixel,
+    half level between the plateaus on either side), robust straight line through the bands."""
+    h, w = frame.shape
+    blur = cv2.GaussianBlur(frame, (0, 0), 1.5).astype(np.float32)
+    ys, xs = [], []
+    for y0 in range(0, h - BAND + 1, BAND):
+        col = blur[y0:y0 + BAND].mean(axis=0)
+        g = np.diff(col); i = int(np.argmax(np.abs(g[20:-20]))) + 20
+        lo_side, hi_side = col[max(0, i - 60):max(1, i - 15)], col[i + 16:i + 61]
+        if len(lo_side) < 5 or len(hi_side) < 5:
+            continue
+        a, b = float(np.median(lo_side)), float(np.median(hi_side))
+        if abs(b - a) < 40:
+            continue
+        half = (a + b) / 2
+        seg = col[i - 15:i + 16]; rising = b > a
+        idx = np.flatnonzero((seg[:-1] < half) & (seg[1:] >= half)) if rising else np.flatnonzero((seg[:-1] > half) & (seg[1:] <= half))
+        if len(idx) == 0:
+            continue
+        j = idx[len(idx) // 2]; x = i - 15 + j + (half - seg[j]) / (seg[j + 1] - seg[j])
+        ys.append(y0 + BAND / 2); xs.append(x)
+    if len(ys) < 8:
+        return None
+    ys, xs = np.array(ys), np.array(xs); keep = np.ones(len(ys), bool)
+    for _ in range(4):
+        slope, icpt = np.polyfit(ys[keep], xs[keep], 1); r = xs - (slope * ys + icpt)
+        s_r = max(1.4826 * np.median(np.abs(r[keep] - np.median(r[keep]))), 0.3)
+        new = keep & (np.abs(r) < 3.5 * s_r)
+        if new.sum() == keep.sum() or new.sum() < 8:
+            break
+        keep = new
+    slope, icpt = np.polyfit(ys[keep], xs[keep], 1); resid = xs[keep] - (slope * ys[keep] + icpt)
+    return {"angle": np.degrees(np.arctan(slope)), "x": slope * h / 2 + icpt - w / 2, "width": float("nan"),
+            "rms": float(resid.std()), "n": int(keep.sum()), "slope": slope, "icpt": icpt}
 
 
 def measure(frame):
     """Fit both fiber edges over the image height. Returns dict with angle (deg, + = bottom of the
     fiber further right), centre x at the middle row, width (px), contrast, or None if no fiber."""
+    if EDGE_ONLY:
+        return measure_edge(frame)
     h, w = frame.shape
     blur = cv2.GaussianBlur(frame, (0, 0), 1.5).astype(np.float32)
     ys, left, right = [], [], []
@@ -147,7 +191,9 @@ class Rig:
         self.z.CloseConnection(); self.h.close()
 
 
-def calibrate(rig, dg=1.0, dz=0.5):
+def calibrate(rig, dg=None, dz=0.5):
+    if dg is None:
+        dg = 0.3 if EDGE_ONLY else 1.0   # the lever arm shifts the image by ~1.3 mm/deg: keep the edge in a 3.4 mm field
     """Image response to the goniometer and Z (finite differences around the current position)."""
     g0, z0 = rig.gonio(), rig.zpos()
     m0, _ = rig.look()

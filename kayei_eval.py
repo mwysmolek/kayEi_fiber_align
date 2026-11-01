@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-UM_PER_PX = 1000 / 49.0
+import fiber_align as fa
+UM_PER_PX = 1000 / fa.PX_PER_MM
 
 
 def load(path):

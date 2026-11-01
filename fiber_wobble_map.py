@@ -31,7 +31,7 @@ from kayei_learn import Rig, fit_sine
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCANS = (5.0, 15.0, 25.0, 35.0, 45.0)
 SPEED = 60.0
-PX_PER_MM = 48.9
+PX_PER_MM = fa.PX_PER_MM
 UM = 1000 / PX_PER_MM
 
 

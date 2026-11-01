@@ -256,7 +256,7 @@ def run_wobble(rig):
 
 
 def fa_cal_px_per_mm():
-    return 49.5  # px per mm of Z (image offset calibration, ~20 um/px)
+    return fa.PX_PER_MM
 
 
 def main():

@@ -31,7 +31,7 @@ def main():
             rig.scan.MOV("1", s); pitools.waitontarget(rig.scan); time.sleep(0.3)
             # re-centre the fiber at this scan position (the fiber is bent)
             _, m = rig.fresh()
-            rig.z_to(rig.zpos() - m["x"] / -49.5)
+            rig.z_to(rig.zpos() - m["x"] / -fa.PX_PER_MM)
             zc = rig.zpos()
             for exp in EXPOSURES:
                 rig.cam.f.ExposureTime.Set(exp * 1000); time.sleep(0.2)
