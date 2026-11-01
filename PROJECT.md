@@ -219,6 +219,20 @@ background, MAD clipping; a lamp reflection on the rod flank needed the last one
 kayEi 0.008-0.043 deg / 6-45 um over 20-360 deg/s with and without scan, no mechanical
 limit reached; feedback 0.035-0.29 deg. Docs 7.7.
 
+## Optics log
+
+- **EO 6 mm** (Edmund Optics 6 mm lens on the Baumer VCXG-15M): everything up to and including
+  2026-11-01 17:40 - all of docs/kayei_method.md sections 3-7.7, image scale 20.45 um/px
+  (48.9 px/mm), 1440 x 1080 px = 29.4 x 22.1 mm field, exposures 20 / 4 / 2 ms depending on
+  the light. Git tag `EO-6mm` marks this state.
+- **Olympus Plan N 4x on an extension tube** (from 2026-11-01 evening): to be characterised -
+  new image scale (`fiber_diameter.py`), field of view, working distance, depth of field (the
+  focus/out-of-plane wobble of +/-100 um will matter at 4x), exposure (`kayei_data/expo_sweep.py`).
+  Constants to re-check after the change: `fiber_diameter.py` Z steps (+/-2 mm may leave the
+  field), `fiber_align` BAND (rows per band) if the fiber becomes much wider, `kayei_learn.
+  fa_cal_px_per_mm` (49.5), `fiber_wobble_map.PX_PER_MM` (48.9), `kayei_eval.UM_PER_PX`,
+  `wobble_4d_after.UM`.
+
 ## Next session: more samples (thin fibers, glass capillary)
 
 The plan is to put other samples in the chuck (thinner fibers, a glass capillary) and see
