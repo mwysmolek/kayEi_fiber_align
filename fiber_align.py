@@ -89,6 +89,13 @@ def measure(frame):
         # transparent cylinder (bright rims, dim core, glints), so never threshold at the peak
         mask = col > bg + 0.3 * (pk - bg)
         if silhouette:
+            # a lamp reflection on the fiber's flank is a bright streak INSIDE the silhouette: bridge
+            # gaps shorter than 0.2 mm so the run spans the whole fiber and the outer edges are used
+            gap = max(3, int(0.2 * PX_PER_MM))
+            edges_ = np.flatnonzero(np.diff(np.r_[False, mask, False]))
+            for a_, b_ in zip(edges_[1::2], edges_[2::2]):   # (end of run, start of next run)
+                if b_ - a_ <= gap:
+                    mask[a_:b_] = True
             # silhouette: the dark corners of a lamp spot are "above" too; take the run that is
             # bounded by background on both sides and has the deepest shadow
             edges = np.flatnonzero(np.diff(np.r_[False, mask, False]))

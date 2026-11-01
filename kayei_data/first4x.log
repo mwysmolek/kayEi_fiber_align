@@ -1,0 +1,25 @@
+centre x -0.6 px, width 477.0, angle -0.017
+18:17:55  camera gain 1
+18:17:55  connected: camera, Hydra (gonio + rotation), PI Z + scan
+
+### AS IS 20 deg/s
+18:17:58  calibration: a_per_g -0.9936, x_per_g -524.3531, a_per_z +0.0051, x_per_z -444.9228
+18:17:58  AS IS (no compensation): rotation 20.0 deg/s
+18:18:18  AS IS (no compensation) ended after 19.6 s, 840 frames (42.9/s), rotation at 464.5 deg
+18:18:18  AS IS (no compensation) errors: angle rms 0.2839 max 0.4853 deg | offset rms 269.3 max 458.5 um
+18:18:18  run logged: run_20261101_181818_as_20dps.csv (840 frames)
+18:18:18  AS IS 20 deg/s: stopped
+   frames 840, not measured 0, edge x range -14..+204 px of +/-720
+18:18:20  calibration: a_per_g -0.9959, x_per_g -523.5940, a_per_z -0.0013, x_per_z -444.5680
+18:18:21  kayEi learn: reference gonio -0.4279 z 12.2103 at scan 31.23; 2 turns at 90 deg/s
+18:18:30  kayEi model: angle 0.262 deg sine (mean +0.223, +0.0000 deg/mm, amplitude change 0.0000 deg/mm), offset 109.5 px sine (mean +78.1, +0.000 px/mm, amplitude change 0.00 px/mm); fit residual 0.0099 deg / 1.01 px
+18:18:30  kayEi gonio lever arm: x_per_g -523.6 +0.00*s px/deg
+
+### kayEi 100 deg/s
+18:18:31  kayEi: rotation 100.0 deg/s, leads gonio 47 / Z 49 ms (velocity-shaped), residual learning on
+18:18:56  kayEi ended after 25.5 s, 1090 frames (42.8/s); tracker 1228 ticks, 1177 gonio cmds, worst gap 35 ms, 29 slow syncs ignored, peak speeds 1.10 deg/s / 1.88 mm/s; trim gonio +0.0009 deg z -1.8 um; residual (Fourier 1..4, 925 updates): gonio 0.0020/0.0010/0.0013/0.0009 deg, Z 0.7/0.5/1.5/1.1 um
+18:18:56  kayEi clock: 91 syncs, correction rms 7.01 deg, max 66.92 deg, 4 above 1 deg, rtt median 8.6 ms
+18:18:56  kayEi errors: angle rms 0.0106 max 0.0482 deg | offset rms 6.0 max 29.4 um
+18:18:56  run logged: run_20261101_181856_kayei_100dps.csv (1090 frames)
+18:18:56  kayEi 100 deg/s: stopped
+   frames 1090, not measured 0, edge x range -13..+11 px of +/-720

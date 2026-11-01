@@ -225,13 +225,18 @@ limit reached; feedback 0.035-0.29 deg. Docs 7.7.
   2026-11-01 17:40 - all of docs/kayei_method.md sections 3-7.7, image scale 20.45 um/px
   (48.9 px/mm), 1440 x 1080 px = 29.4 x 22.1 mm field, exposures 20 / 4 / 2 ms depending on
   the light. Git tag `EO-6mm` marks this state.
-- **Olympus Plan N 4x on an extension tube** (from 2026-11-01 evening): to be characterised -
-  new image scale (`fiber_diameter.py`), field of view, working distance, depth of field (the
-  focus/out-of-plane wobble of +/-100 um will matter at 4x), exposure (`kayei_data/expo_sweep.py`).
-  Constants to re-check after the change: `fiber_diameter.py` Z steps (+/-2 mm may leave the
-  field), `fiber_align` BAND (rows per band) if the fiber becomes much wider, `kayei_learn.
-  fa_cal_px_per_mm` (49.5), `fiber_wobble_map.PX_PER_MM` (48.9), `kayei_eval.UM_PER_PX`,
-  `wobble_4d_after.UM`.
+- **Olympus Plan N 4x on an extension tube** (from 2026-11-01 18:00): measured 425.4 px/mm =
+  2.351 um/px (effective 1.47x), field 3.39 x 2.54 mm, exposure 20 ms with the backlight, rod
+  1.1 mm = 477 px fits with +/-1.1 mm margin (two-edge fit stays; `EDGE_ONLY` exists for
+  thicker samples). Per-frame noise 0.016 um (was 0.14). Lever arm 524 px/deg -> the rod MUST
+  be centred in the frame and calibration steps are 0.5 deg / 0.5 mm (automatic from
+  `PX_PER_MM`). All scale constants now come from `fiber_align.PX_PER_MM`. Soft focus (35 um
+  edge) and dust on the sensor window - cosmetic so far. kayEi 100 deg/s: 0.011 deg / 6 um.
+  `fiber_diameter.py` Z steps (+/-2 mm) exceed this field - use +/-0.25 mm if needed.
+  **Depth of field is the limit** (+/-40 um): the rod's out-of-plane tilt moves it 0.3 mm towards/away
+  from the objective over the 40 mm scan -> silhouette blurred beyond use at scan 5-15 mm when
+  focused at 31; the 30-run sweep on this optic is invalid for that reason (docs 7.8). Usable in
+  focus at one scan position (6 um at 100 deg/s); scanning needs a focus axis or re-focusing.
 
 ## Next session: more samples (thin fibers, glass capillary)
 

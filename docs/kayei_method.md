@@ -684,6 +684,9 @@ with what these stages can execute.
 
 1. ~~Z and scan axes in the same scheme~~ done (7.2b). ~~Residual learning~~ on, Fourier form (7.3e).
    ~~Learn at two scan positions~~ done. ~~Full-system evaluation~~ done twice (7.3, 7.3f).
+1b. **A focus axis** (new, 7.8): with a microscope objective the out-of-plane wobble (+/-100 um over
+   the turn) and tilt (0.3 mm over the scan) exceed the depth of field; kayEi can drive a
+   focus stage feed-forward from the out-of-plane model, and the edge blur is a focus signal.
 2. **The goniometer is the limit.** With a 1.26 deg tilt it needs 4.4 deg/s at 200 deg/s and
    7.9 at 360 against its 4 deg/s, and even below that its trapezoid-per-target execution
    leaves 0.034 deg of ripple (6.7). Options, in order of effort: a smaller tilt (real fibers
@@ -853,6 +856,69 @@ setup corrects the focus. In-plane rms 230 um -> 18 um (13x); the residual has n
 sine left, it is the stage ripple of 6.7. The focus wobble (+/-100 um here) is the obvious
 next axis.
 
+## 7.8 Finer optics: Olympus Plan N 4x on an extension tube (2026-11-01, evening)
+
+With the rod unchanged the person swapped the Edmund Optics 6 mm lens for a 4x microscope
+objective on an extension tube, to see what a finer image scale buys. Everything measured
+with the 6 mm lens (sections 3-7.7) is frozen under the git tag `EO-6mm`.
+
+**Scale and noise.** Z steps of 0.05 mm (`kayei_data/olympus4x_*.png`, then
+`fiber_align.PX_PER_MM`): **425.4 +/- 0.6 px/mm = 2.351 um/px**, an effective magnification of
+1.47x on the 3.45 um pixels, field 3.39 x 2.54 mm. The rod (476.8 px = 1.121 mm by this
+silhouette, 1.106 mm by the previous one) fits with +/-1.1 mm to spare, so the two-edge
+centre-line fit of section 3 stays in use; a single-edge mode (`fiber_align.EDGE_ONLY`,
+`measure_edge`) was written for thicker samples. Per-frame noise of the centre line:
+0.007 px = **0.016 um** (0.14 um with the 6 mm lens); angle noise 0.0003 deg, unchanged,
+because the angle lever is now 2.5 mm of fiber instead of 22 mm. The measured angle does not
+depend on where the rod sits in the frame (0.02 deg over +/-200 px).
+
+**Three detours, each a lesson about a small field:** (1) the first frame showed the rod half
+outside the frame, and the conclusion "only one edge fits" led to the single-edge detector,
+which then jumped between the two edges once the rod was centred; (2) with the rod placed
+near the right border by hand, the +/-300 um wobble carried it out of the frame for a third
+of each turn (0.28 deg / 1.1 mm "errors" - garbage, not physics): the rod must sit at the
+centre, the wobble then uses +/-128 px of 1440; (3) the calibration's 1.0 deg goniometer step
+shifts the image by the lever arm, 524 px/deg here, and pushed one edge out of the frame.
+Calibration steps now scale with the field of view (0.5 deg / 0.5 mm at 3.4 mm, 1 deg /
+0.5 mm at 29 mm) and the axes are restored on failure.
+
+**The valid result, 100 deg/s, scan 31 mm, in focus** (`run_20261101_181856_kayei_100dps.csv`):
+wobble 0.26 deg / 257 um here; kayEi left **0.011 deg / 6.0 um rms** (max 29 um), every frame
+measured, the rod centre within +/-13 px of the frame centre - against 0.032 deg / 14 um
+with the 6 mm lens on the same rod at the same speed (7.7). The finer scale improves not only
+the measurement but the compensated result, by 2-3x.
+
+**Why the 30-run sweep on this optic is invalid: depth of field.** The sweep
+(`kayei_data/sweep_20261101_rod_4x.log`, `eval_rod_4x_20261101.txt`) produced "fiber lost"
+in eight runs and kayEi numbers of 0.2-0.4 deg in most others - and every one of those runs
+either scanned or started where a scan run had left the camera. The rod's 0.44 deg tilt is
+almost entirely out of the camera plane (5c: tilt (+0.004, -0.441) deg), so along the 40 mm
+scan its distance to the objective changes by ~0.3 mm, and over one turn by +/-100 um (the
+focus component of the 4D plot). The 4x/0.10 objective has a depth of field of about
++/-40 um; the 6 mm lens had millimetres. Measured with the rod centred at each position:
+
+| scan position | edge blur (10-90 %) | measured width | fit residual |
+|---|---|---|---|
+| 45 mm | 16-17 px | 481.8 px | 0.14 px |
+| 31 mm (focused here) | 17 px | 466.9 px | 0.06 px |
+| 15 mm | > 250 / 40 px | 498.9 px | 0.22 px |
+| 5 mm | > 250 px both edges | 499.1 px | 0.69 px |
+
+Over one turn at a fixed scan position the edge blur breathes between 7 and 18 px and the
+width between 476 and 483 px (the +/-100 um focus wobble); the fit survives that. The
+0.3 mm along the scan it does not. The sweep table is therefore not reported; the runs stay
+in `kayei_data/` as the record of what defocus does to a silhouette fit.
+
+**Consequences.** Higher magnification buys lateral accuracy (6 um instead of 14 um at
+100 deg/s) at the price of a depth of field smaller than the fiber's own out-of-plane motion.
+With this objective the station works at one scan position in focus, or with re-focusing per
+position. The next axis is focus: kayEi already reconstructs the out-of-plane component
+(e_y(s) and the turn's quadrature term, 5b/5c), so a camera-focus stage could be driven
+feed-forward like Z, and the edge blur itself is a usable focus signal (7-18 px over the
+turn, > 250 px at 0.3 mm). Fewer extension tubes would enlarge the field and the angle lever
+but leave the depth of field limited by the objective's aperture (+/- 50-60 um), still short
+of the 0.3 mm along the scan; a straighter clamping would shrink the excursion in proportion.
+
 ## 8. Experiment log
 
 | Date | Experiment | Script / data | Key numbers |
@@ -886,6 +952,9 @@ next axis.
 | 2026-11-01 | rod diameter / image scale (silhouette) | `fiber_diameter.py`, `kayei_data/fiber_diameter_rod_20261101.csv` | 1.106 +/- 0.004 mm, 20.45 um/px |
 | 2026-11-01 | rod 5-position map | `fiber_wobble_map.py`, `kayei_data/wobble_map_rod_20261101.csv` | tilt 0.441 deg, ecc. (-116, +477) um, sine residual 0.003 deg / 2 um |
 | 2026-11-01 | 4D before/after, rod, 100 deg/s, scan 5-45 mm | `kayei_data/wobble_4d_after.py`, `run_20261101_173707_kayei_100dps_scan.csv`, `docs/figures/wobble_4d_after_rod.mp4` | in-plane 230 -> 18 um rms; focus +/-100 um uncorrected |
+| 2026-11-01 ev. | Olympus 4x: image scale by Z steps, noise | `kayei_data/olympus4x_*.png`, 7.8 | 425.4 px/mm = 2.351 um/px, field 3.39 x 2.54 mm, 0.016 um/frame |
+| 2026-11-01 ev. | kayEi through the 4x, 100 deg/s, in focus | `kayei_data/run_20261101_181856_kayei_100dps.csv` | 0.011 deg / 6.0 um (6 mm lens: 0.032 / 14) |
+| 2026-11-01 ev. | sweep on the 4x (30 runs) - invalid, defocus | `kayei_data/sweep_20261101_rod_4x.log`, `eval_rod_4x_20261101.txt`, `focus4x_*.png` | edge blur 17 px in focus, > 250 px at scan 5 mm; fiber lost in 8 runs |
 | 2026-11-01 | demo movies, rod, 200 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261101_172358_*.mp4` | as is 0.28 deg -> live align 0.27 -> kayEi 0.037 deg / 28 um |
 | 2026-11-01 | comparison sweep, rod (30 runs) | `kayei_sweep.py`, `kayei_data/eval_rod_20261101.txt`, `sweep_20261101_rod.log` | see 7.7 |
 | 2026-10-31 ev. | second comparison sweep, tilted fiber (30 runs) | `kayei_sweep.py`, `kayei_data/eval_evening_list.txt`, `sweep_20261031_evening.log`, `live_rerun_20261031.log` | kayEi 0.03 deg / 20-50 um to 100 deg/s; goniometer-limited from 200 deg/s (7.3f) |

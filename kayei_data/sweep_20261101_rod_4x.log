@@ -1,0 +1,345 @@
+18:19:40  camera gain 1
+18:19:40  connected: camera, Hydra (gonio + rotation), PI Z + scan
+18:19:43  calibration: a_per_g -0.9875, x_per_g -520.1387, a_per_z +0.0217, x_per_z -441.3389
+18:19:43  it0: angle  -0.0080 deg  x    -3.13 px  width 469.2 px  gonio  -0.3271  z  12.1228
+18:19:43  it1: angle  -0.0182 deg  x    +0.13 px  width 469.3 px  gonio  -0.3271  z  12.1156
+18:19:43  aligned in 1 it, 0.6 s: angle -0.0182 deg, x +0.13 px
+18:19:43  kayEi learn: reference gonio -0.3271 z 12.1156 at scan 31.23; 2 turns at 90 deg/s
+18:19:52  kayEi learn: scan -> 5.00 mm, calibrate + 2 turns there
+18:19:57  calibration: a_per_g -1.5647, x_per_g -738.1267, a_per_z -0.0538, x_per_z -443.9597
+18:20:09  kayEi model: angle 0.661 deg sine (mean -0.044, +0.0053 deg/mm, amplitude change 0.0142 deg/mm), offset 213.9 px sine (mean +118.9, -1.660 px/mm, amplitude change 3.57 px/mm); fit residual 0.0173 deg / 1.19 px
+18:20:09  kayEi gonio lever arm: x_per_g -779.7 +8.31*s px/deg
+
+### AS IS 20 deg/s
+18:20:10  it0: angle  -0.0519 deg  x   -14.23 px  width 470.3 px  gonio  -0.3271  z  12.1156
+18:20:11  it1: angle  -0.0113 deg  x    +0.15 px  width 470.5 px  gonio  -0.3602  z  12.1219
+18:20:11  aligned in 1 it, 1.0 s: angle -0.0113 deg, x +0.15 px
+18:20:11  AS IS (no compensation): rotation 20.0 deg/s
+18:20:55  AS IS (no compensation) ended after 44.5 s, 1955 frames (43.9/s), rotation at 893.8 deg
+18:20:55  AS IS (no compensation) errors: angle rms 0.2223 max 0.4176 deg | offset rms 233.7 max 429.3 um
+18:20:55  run logged: run_20261101_182055_as_20dps.csv (1955 frames)
+18:20:55  AS IS 20 deg/s: stopped
+
+### LIVE align 20 deg/s
+18:20:56  it0: angle  +0.2181 deg  x  +125.11 px  width 479.3 px  gonio  -0.3602  z  12.1219
+18:20:57  it1: angle  +0.0828 deg  x    +0.00 px  width 479.3 px  gonio  -0.2208  z  12.2419
+18:20:58  it2: angle  +0.0318 deg  x    -0.10 px  width 479.3 px  gonio  -0.1679  z  12.1797
+18:20:59  it3: angle  +0.0099 deg  x    +0.24 px  width 479.3 px  gonio  -0.1476  z  12.1547
+18:20:59  aligned in 3 it, 3.0 s: angle +0.0099 deg, x +0.24 px
+18:20:59  LIVE align: rotation 20.0 deg/s
+18:21:41  LIVE align ended after 42.5 s, 1408 frames (33.1/s), rotation at 1009.9 deg
+18:21:41  LIVE align errors: angle rms 0.0230 max 0.0693 deg | offset rms 4.4 max 20.2 um
+18:21:41  run logged: run_20261101_182141_live_20dps.csv (1408 frames)
+18:21:41  LIVE align 20 deg/s: stopped
+
+### kayEi 20 deg/s
+18:21:43  kayEi: rotation 20.0 deg/s, leads gonio 27 / Z 42 ms (velocity-shaped), residual learning on
+18:22:27  kayEi ended after 45.6 s, 2005 frames (44.0/s); tracker 2224 ticks, 1988 gonio cmds, worst gap 33 ms, 56 slow syncs ignored, peak speeds 2.17 deg/s / 1.18 mm/s; trim gonio -0.0256 deg z +2.6 um; residual (Fourier 1..4, 1189 updates): gonio 0.0037/0.0014/0.0008/0.0006 deg, Z 0.7/0.6/0.4/0.4 um
+18:22:27  kayEi clock: 166 syncs, correction rms 1.06 deg, max 13.53 deg, 2 above 1 deg, rtt median 8.7 ms
+18:22:27  kayEi errors: angle rms 0.0361 max 0.1147 deg | offset rms 9.3 max 44.3 um
+18:22:27  run logged: run_20261101_182227_kayei_20dps.csv (2005 frames)
+18:22:27  kayEi 20 deg/s: stopped
+
+### AS IS 20 deg/s + scan
+18:22:28  it0: angle  +0.0060 deg  x    +0.39 px  width 477.4 px  gonio  -0.4404  z  12.1966
+18:22:28  aligned in 0 it, 0.2 s: angle +0.0060 deg, x +0.39 px
+18:22:28  AS IS (no compensation): rotation 20.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:23:14  AS IS (no compensation) ended after 45.3 s, 1990 frames (43.9/s), rotation at 987.2 deg
+18:23:14  AS IS (no compensation) errors: angle rms 0.5201 max 2.3606 deg | offset rms 200.7 max 400.4 um
+18:23:14  run logged: run_20261101_182314_as_20dps_scan.csv (1990 frames)
+18:23:14  AS IS 20 deg/s + scan: stopped
+
+### LIVE align 20 deg/s + scan
+18:23:14  it0: angle  +0.6744 deg  x  +112.82 px  width 482.8 px  gonio  -0.4404  z  12.1966
+18:23:15  it1: angle  +0.2589 deg  x    -1.53 px  width 483.3 px  gonio  -0.0094  z  12.0441
+18:23:16  it2: angle  +0.1020 deg  x    -2.86 px  width 483.7 px  gonio  +0.1561  z  11.8856
+18:23:17  it3: angle  +0.0365 deg  x    -0.83 px  width 483.7 px  gonio  +0.2213  z  11.8169
+18:23:18  it4: angle  +0.0065 deg  x    -0.36 px  width 483.5 px  gonio  +0.2446  z  11.7938
+18:23:18  aligned in 4 it, 4.2 s: angle +0.0065 deg, x -0.36 px
+18:23:19  LIVE align: rotation 20.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:23:25  LIVE align ended after 6.6 s, 194 frames (29.4/s), rotation at 384.3 deg
+18:23:25  LIVE align errors: angle rms 0.4686 max 1.5415 deg | offset rms 10.2 max 31.7 um
+18:23:25  run logged: run_20261101_182325_live_20dps_scan.csv (194 frames)
+18:23:25  LIVE align 20 deg/s + scan: ERROR fiber lost from the image
+
+### kayEi 20 deg/s + scan
+18:23:26  kayEi: rotation 20.0 deg/s, leads gonio 27 / Z 42 ms (velocity-shaped), scan 5.0..45.0 mm at 1.0 mm/s, residual learning on
+18:24:11  kayEi ended after 45.6 s, 2003 frames (44.0/s); tracker 2218 ticks, 1964 gonio cmds, worst gap 32 ms, 41 slow syncs ignored, peak speeds 0.59 deg/s / 6.06 mm/s; trim gonio +0.0959 deg z +1.9 um; residual (Fourier 1..4, 1179 updates): gonio 0.0109/0.0021/0.0045/0.0039 deg, Z 3.3/1.3/2.1/2.5 um
+18:24:11  kayEi clock: 167 syncs, correction rms 1.06 deg, max 13.63 deg, 1 above 1 deg, rtt median 8.1 ms
+18:24:11  kayEi errors: angle rms 0.2801 max 2.0693 deg | offset rms 39.7 max 131.7 um
+18:24:11  run logged: run_20261101_182411_kayei_20dps_scan.csv (2003 frames)
+18:24:11  kayEi 20 deg/s + scan: stopped
+
+### AS IS 50 deg/s
+18:24:12  it0: angle  +0.0143 deg  x    +6.06 px  width 493.4 px  gonio  -0.1853  z  12.3181
+18:24:13  it1: angle  +0.0097 deg  x    +0.23 px  width 493.6 px  gonio  -0.1853  z  12.3319
+18:24:13  aligned in 1 it, 0.7 s: angle +0.0097 deg, x +0.23 px
+18:24:13  AS IS (no compensation): rotation 50.0 deg/s
+18:24:42  AS IS (no compensation) ended after 29.8 s, 1299 frames (43.6/s), rotation at 1643.4 deg
+18:24:42  AS IS (no compensation) errors: angle rms 0.4869 max 0.9237 deg | offset rms 362.1 max 631.8 um
+18:24:42  run logged: run_20261101_182442_as_50dps.csv (1299 frames)
+18:24:42  AS IS 50 deg/s: stopped
+
+### LIVE align 50 deg/s
+18:24:43  it0: angle  +0.2481 deg  x   +40.44 px  width 491.5 px  gonio  -0.1853  z  12.3319
+18:24:44  it1: angle  +0.1010 deg  x    -0.78 px  width 491.5 px  gonio  -0.0268  z  12.1672
+18:24:45  it2: angle  +0.0253 deg  x    -0.74 px  width 491.4 px  gonio  +0.0378  z  12.0619
+18:24:46  it3: angle  +0.0108 deg  x    -0.59 px  width 491.2 px  gonio  +0.0539  z  12.0338
+18:24:46  aligned in 3 it, 3.1 s: angle +0.0108 deg, x -0.59 px
+18:24:46  LIVE align: rotation 50.0 deg/s
+18:25:13  LIVE align ended after 27.4 s, 830 frames (30.3/s), rotation at 1535.6 deg
+18:25:13  LIVE align errors: angle rms 0.1396 max 0.3720 deg | offset rms 36.2 max 158.5 um
+18:25:13  run logged: run_20261101_182513_live_50dps.csv (830 frames)
+18:25:13  LIVE align 50 deg/s: stopped
+
+### kayEi 50 deg/s
+18:25:15  kayEi: rotation 50.0 deg/s, leads gonio 34 / Z 44 ms (velocity-shaped), residual learning on
+18:25:45  kayEi ended after 30.5 s, 1320 frames (43.2/s); tracker 1464 ticks, 1406 gonio cmds, worst gap 218 ms, 48 slow syncs ignored, peak speeds 4.00 deg/s / 10.00 mm/s; trim gonio -0.0626 deg z +42.8 um; residual (Fourier 1..4, 968 updates): gonio 0.0382/0.0019/0.0139/0.0015 deg, Z 23.3/2.4/14.9/1.9 um
+18:25:45  kayEi clock: 109 syncs, correction rms 3.20 deg, max 33.28 deg, 3 above 1 deg, rtt median 11.2 ms
+18:25:45  kayEi errors: angle rms 0.0882 max 0.2704 deg | offset rms 57.9 max 189.4 um
+18:25:45  run logged: run_20261101_182545_kayei_50dps.csv (1320 frames)
+18:25:45  kayEi 50 deg/s: stopped
+
+### AS IS 50 deg/s + scan
+18:25:45  it0: angle  +0.0117 deg  x   -12.29 px  width 487.2 px  gonio  -0.8336  z  12.9028
+18:25:46  it1: angle  +0.0101 deg  x    +0.04 px  width 486.8 px  gonio  -0.8336  z  12.8750
+18:25:46  aligned in 1 it, 0.7 s: angle +0.0101 deg, x +0.04 px
+18:25:46  AS IS (no compensation): rotation 50.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:26:16  AS IS (no compensation) ended after 29.8 s, 1297 frames (43.5/s), rotation at 1572.1 deg
+18:26:16  AS IS (no compensation) errors: angle rms 0.6839 max 1.4226 deg | offset rms 299.8 max 693.5 um
+18:26:16  run logged: run_20261101_182616_as_50dps_scan.csv (1297 frames)
+18:26:16  AS IS 50 deg/s + scan: stopped
+
+### LIVE align 50 deg/s + scan
+18:26:17  it0: angle  -1.3443 deg  x   -42.00 px  width 479.7 px  gonio  -0.8336  z  12.8750
+18:26:18  it1: angle  -0.1100 deg  x    +8.88 px  width 480.2 px  gonio  -1.6927  z  13.7294
+18:26:19  it2: angle  -0.0386 deg  x    +1.56 px  width 480.2 px  gonio  -1.7630  z  13.8278
+18:26:20  it3: angle  +0.1004 deg  x    +0.49 px  width 480.0 px  gonio  -1.7876  z  13.8572
+18:26:21  it4: angle  +0.0395 deg  x    -1.50 px  width 480.0 px  gonio  -1.7234  z  13.7903
+18:26:21  it5: angle  -0.1028 deg  x    -0.17 px  width 480.2 px  gonio  -1.6982  z  13.7600
+18:26:22  it6: angle  -0.0354 deg  x    +1.40 px  width 480.1 px  gonio  -1.7639  z  13.8303
+18:26:23  it7: angle  +0.2037 deg  x    +0.31 px  width 479.7 px  gonio  -1.7866  z  13.8559
+18:26:24  not converged after 8 iterations: angle -0.1416 deg, x -1.31 px
+18:26:24  aligned in 8 it, 7.9 s: angle -0.1416 deg, x -1.31 px
+18:26:25  LIVE align: rotation 50.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:26:26  LIVE align ended after 2.2 s, 53 frames (24.4/s), rotation at 203.4 deg
+18:26:26  LIVE align errors: angle rms 1.0246 max 1.5304 deg | offset rms 86.7 max 356.1 um
+18:26:26  run logged: run_20261101_182626_live_50dps_scan.csv (53 frames)
+18:26:26  LIVE align 50 deg/s + scan: ERROR fiber lost from the image
+
+### kayEi 50 deg/s + scan
+18:26:28  kayEi: rotation 50.0 deg/s, leads gonio 34 / Z 44 ms (velocity-shaped), scan 5.0..45.0 mm at 1.0 mm/s, residual learning on
+18:26:42  kayEi ended after 14.4 s, 593 frames (41.3/s); tracker 671 ticks, 610 gonio cmds, worst gap 31 ms, 9 slow syncs ignored, peak speeds 0.43 deg/s / 1.11 mm/s; trim gonio -0.0774 deg z +55.8 um; residual (Fourier 1..4, 222 updates): gonio 0.0211/0.0146/0.0040/0.0006 deg, Z 7.9/8.7/2.1/0.5 um
+18:26:42  kayEi clock: 50 syncs, correction rms 4.72 deg, max 33.69 deg, 3 above 1 deg, rtt median 7.5 ms
+18:26:42  kayEi errors: angle rms 0.4526 max 1.5799 deg | offset rms 50.9 max 111.9 um
+18:26:42  run logged: run_20261101_182642_kayei_50dps_scan.csv (593 frames)
+18:26:42  kayEi 50 deg/s + scan: ERROR fiber lost from the image
+
+### AS IS 100 deg/s
+18:26:43  it0: angle  +1.4837 deg  x   -21.33 px  width 481.1 px  gonio  -0.2625  z  12.2053
+18:26:44  it1: angle  -0.0433 deg  x    +0.60 px  width 481.1 px  gonio  +0.6857  z  11.1591
+18:26:45  it2: angle  -0.0155 deg  x    -0.26 px  width 481.1 px  gonio  +0.6580  z  11.1875
+18:26:45  aligned in 2 it, 2.4 s: angle -0.0155 deg, x -0.26 px
+18:26:45  AS IS (no compensation): rotation 100.0 deg/s
+18:27:08  AS IS (no compensation) ended after 23.1 s, 1003 frames (43.3/s), rotation at 2375.2 deg
+18:27:08  AS IS (no compensation) errors: angle rms 0.6858 max 1.2451 deg | offset rms 137.6 max 215.9 um
+18:27:08  run logged: run_20261101_182708_as_100dps.csv (1003 frames)
+18:27:08  AS IS 100 deg/s: stopped
+
+### LIVE align 100 deg/s
+18:27:09  it0: angle  +0.1320 deg  x   +93.21 px  width 479.7 px  gonio  +0.6580  z  11.1875
+18:27:10  it1: angle  +0.0394 deg  x    +0.32 px  width 479.6 px  gonio  +0.7424  z  11.3100
+18:27:11  it2: angle  -0.7951 deg  x    -2.72 px  width 479.7 px  gonio  +0.7676  z  11.2838
+18:27:12  it3: angle  +0.5324 deg  x    -0.27 px  width 479.6 px  gonio  +0.2595  z  11.8066
+18:27:13  it4: angle  +0.1885 deg  x    -0.06 px  width 479.7 px  gonio  +0.5997  z  11.4575
+18:27:14  it5: angle  +0.0625 deg  x    +4.39 px  width 479.6 px  gonio  +0.7201  z  11.3253
+18:27:15  it6: angle  +0.0213 deg  x    +0.71 px  width 479.6 px  gonio  +0.7601  z  11.2928
+18:27:16  it7: angle  -0.8028 deg  x    +0.04 px  width 479.5 px  gonio  +0.7737  z  11.2725
+18:27:17  not converged after 8 iterations: angle +0.5322 deg, x -1.03 px
+18:27:17  aligned in 8 it, 8.5 s: angle +0.5322 deg, x -1.03 px
+18:27:17  LIVE align: rotation 100.0 deg/s
+18:27:21  LIVE align ended after 3.6 s, 99 frames (27.8/s), rotation at 497.2 deg
+18:27:21  LIVE align errors: angle rms 0.7752 max 1.7390 deg | offset rms 61.4 max 172.0 um
+18:27:21  run logged: run_20261101_182721_live_100dps.csv (99 frames)
+18:27:21  LIVE align 100 deg/s: ERROR fiber lost from the image
+
+### kayEi 100 deg/s
+18:27:22  kayEi: rotation 100.0 deg/s, leads gonio 47 / Z 49 ms (velocity-shaped), residual learning on
+18:27:41  kayEi ended after 19.2 s, 808 frames (42.0/s); tracker 913 ticks, 862 gonio cmds, worst gap 34 ms, 22 slow syncs ignored, peak speeds 0.70 deg/s / 6.16 mm/s; trim gonio +0.0654 deg z -23.4 um; residual (Fourier 1..4, 572 updates): gonio 0.1262/0.0211/0.0133/0.0053 deg, Z 64.0/10.9/7.9/3.0 um
+18:27:41  kayEi clock: 68 syncs, correction rms 8.12 deg, max 66.98 deg, 3 above 1 deg, rtt median 8.9 ms
+18:27:41  kayEi errors: angle rms 0.4325 max 1.7126 deg | offset rms 64.8 max 148.8 um
+18:27:41  run logged: run_20261101_182741_kayei_100dps.csv (808 frames)
+18:27:41  kayEi 100 deg/s: ERROR fiber lost from the image
+
+### AS IS 100 deg/s + scan
+18:27:42  it0: angle  +1.1939 deg  x   -21.27 px  width 482.3 px  gonio  -0.2385  z  12.1375
+18:27:43  it1: angle  -1.0622 deg  x    -4.10 px  width 482.4 px  gonio  +0.5245  z  11.2884
+18:27:44  it2: angle  +1.1967 deg  x    +1.46 px  width 482.5 px  gonio  -0.1543  z  11.9953
+18:27:46  it3: angle  -0.1678 deg  x    +2.61 px  width 482.4 px  gonio  +0.6105  z  11.1938
+18:27:47  it4: angle  -0.0578 deg  x    +3.85 px  width 482.4 px  gonio  +0.5032  z  11.2997
+18:27:47  it5: angle  -0.0209 deg  x    +3.85 px  width 482.4 px  gonio  +0.4663  z  11.3375
+18:27:48  it6: angle  +0.2542 deg  x    +2.44 px  width 482.4 px  gonio  +0.4529  z  11.3578
+18:27:50  it7: angle  -0.1203 deg  x    +1.05 px  width 482.5 px  gonio  +0.6153  z  11.1922
+18:27:50  not converged after 8 iterations: angle -0.2038 deg, x -1.60 px
+18:27:50  aligned in 8 it, 8.8 s: angle -0.2038 deg, x -1.60 px
+18:27:51  AS IS (no compensation): rotation 100.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:28:07  AS IS (no compensation) ended after 16.7 s, 713 frames (42.6/s), rotation at 1725.1 deg
+18:28:07  AS IS (no compensation) errors: angle rms 0.7861 max 1.1743 deg | offset rms 162.5 max 274.4 um
+18:28:07  run logged: run_20261101_182807_as_100dps_scan.csv (713 frames)
+18:28:07  AS IS 100 deg/s + scan: stopped
+
+### LIVE align 100 deg/s + scan
+18:28:08  it0: angle  -0.2836 deg  x   +90.16 px  width 484.6 px  gonio  +0.5384  z  11.2741
+18:28:09  it1: angle  -0.0863 deg  x    -1.71 px  width 484.8 px  gonio  +0.3572  z  11.6491
+18:28:10  it2: angle  -0.0372 deg  x    +0.50 px  width 484.8 px  gonio  +0.3020  z  11.6969
+18:28:11  it3: angle  -0.0106 deg  x    +0.03 px  width 484.7 px  gonio  +0.2782  z  11.7197
+18:28:11  aligned in 3 it, 3.2 s: angle -0.0106 deg, x +0.03 px
+18:28:11  LIVE align: rotation 100.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:28:21  LIVE align ended after 9.7 s, 288 frames (29.8/s), rotation at 1180.2 deg
+18:28:21  LIVE align errors: angle rms 0.6659 max 2.0514 deg | offset rms 42.7 max 169.4 um
+18:28:21  run logged: run_20261101_182821_live_100dps_scan.csv (288 frames)
+18:28:21  LIVE align 100 deg/s + scan: ERROR fiber lost from the image
+
+### kayEi 100 deg/s + scan
+18:28:22  kayEi: rotation 100.0 deg/s, leads gonio 47 / Z 49 ms (velocity-shaped), scan 5.0..45.0 mm at 1.0 mm/s, residual learning on
+18:28:26  kayEi ended after 4.9 s, 157 frames (31.9/s); tracker 203 ticks, 188 gonio cmds, worst gap 32 ms, 7 slow syncs ignored, peak speeds 4.00 deg/s / 2.28 mm/s; trim gonio +0.0000 deg z +0.0 um; residual (Fourier 1..4, 0 updates): gonio 0.0000/0.0000/0.0000/0.0000 deg, Z 0.0/0.0/0.0/0.0 um
+18:28:26  kayEi clock: 14 syncs, correction rms 17.91 deg, max 69.68 deg, 4 above 1 deg, rtt median 14.3 ms
+18:28:26  kayEi errors: angle rms 0.6480 max 1.5494 deg | offset rms 15.1 max 40.5 um
+18:28:26  run logged: run_20261101_182826_kayei_100dps_scan.csv (157 frames)
+18:28:26  kayEi 100 deg/s + scan: ERROR fiber lost from the image
+
+### AS IS 200 deg/s
+18:28:27  it0: angle  +1.1289 deg  x    -4.43 px  width 481.7 px  gonio  -0.2726  z  12.0525
+18:28:28  it1: angle  +0.1059 deg  x    +0.41 px  width 481.9 px  gonio  +0.4489  z  11.2938
+18:28:29  it2: angle  +0.0365 deg  x    -0.20 px  width 482.0 px  gonio  +0.5166  z  11.2259
+18:28:30  it3: angle  +0.0101 deg  x    +0.02 px  width 482.0 px  gonio  +0.5399  z  11.2009
+18:28:30  aligned in 3 it, 3.3 s: angle +0.0101 deg, x +0.02 px
+18:28:30  AS IS (no compensation): rotation 200.0 deg/s
+18:28:52  AS IS (no compensation) ended after 22.3 s, 961 frames (43.2/s), rotation at 4398.5 deg
+18:28:52  AS IS (no compensation) errors: angle rms 0.6940 max 1.0586 deg | offset rms 189.1 max 322.4 um
+18:28:52  run logged: run_20261101_182852_as_200dps.csv (961 frames)
+18:28:52  AS IS 200 deg/s: stopped
+
+### LIVE align 200 deg/s
+18:28:53  it0: angle  -1.0355 deg  x   -18.29 px  width 481.4 px  gonio  +0.5399  z  11.2009
+18:28:54  it1: angle  +0.8573 deg  x    -0.13 px  width 481.1 px  gonio  -0.1218  z  11.8463
+18:28:56  it2: angle  -0.9146 deg  x    +1.06 px  width 481.5 px  gonio  +0.4261  z  11.2756
+18:28:57  it3: angle  +0.8948 deg  x    -0.07 px  width 481.1 px  gonio  -0.1585  z  11.8841
+18:28:58  it4: angle  -0.9021 deg  x    +0.84 px  width 481.4 px  gonio  +0.4134  z  11.2891
+18:28:59  it5: angle  +0.8988 deg  x    -0.03 px  width 481.0 px  gonio  -0.1631  z  11.8891
+18:29:01  it6: angle  -0.9002 deg  x    +0.80 px  width 481.5 px  gonio  +0.4113  z  11.2916
+18:29:02  it7: angle  +0.8996 deg  x    +0.02 px  width 481.1 px  gonio  -0.1640  z  11.8900
+18:29:03  not converged after 8 iterations: angle -0.8997 deg, x +0.78 px
+18:29:03  aligned in 8 it, 10.1 s: angle -0.8997 deg, x +0.78 px
+18:29:03  LIVE align: rotation 200.0 deg/s
+18:29:18  LIVE align ended after 15.5 s, 481 frames (31.1/s), rotation at 3026.0 deg
+18:29:18  LIVE align errors: angle rms 0.5504 max 1.8910 deg | offset rms 76.4 max 301.2 um
+18:29:19  run logged: run_20261101_182918_live_200dps.csv (481 frames)
+18:29:19  LIVE align 200 deg/s: stopped
+
+### kayEi 200 deg/s
+18:29:20  kayEi: rotation 200.0 deg/s, leads gonio 72 / Z 58 ms (velocity-shaped), residual learning on
+18:29:45  kayEi ended after 25.6 s, 1091 frames (42.7/s); tracker 1220 ticks, 1167 gonio cmds, worst gap 36 ms, 38 slow syncs ignored, peak speeds 2.02 deg/s / 4.09 mm/s; trim gonio -0.0259 deg z -8.9 um; residual (Fourier 1..4, 901 updates): gonio 0.2003/0.0147/0.0099/0.0061 deg, Z 42.8/10.9/6.0/2.6 um
+18:29:45  kayEi clock: 91 syncs, correction rms 14.12 deg, max 134.17 deg, 25 above 1 deg, rtt median 10.7 ms
+18:29:45  kayEi errors: angle rms 0.3629 max 1.5807 deg | offset rms 49.3 max 125.3 um
+18:29:45  run logged: run_20261101_182945_kayei_200dps.csv (1091 frames)
+18:29:45  kayEi 200 deg/s: stopped
+
+### AS IS 200 deg/s + scan
+18:29:45  it0: angle  +0.0149 deg  x    +9.45 px  width 475.5 px  gonio  -0.0258  z  11.9184
+18:29:46  it1: angle  +0.0150 deg  x    +0.21 px  width 475.9 px  gonio  -0.0258  z  11.9397
+18:29:46  aligned in 1 it, 0.6 s: angle +0.0150 deg, x +0.21 px
+18:29:46  AS IS (no compensation): rotation 200.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:30:11  AS IS (no compensation) ended after 24.9 s, 1079 frames (43.4/s), rotation at 5150.8 deg
+18:30:11  AS IS (no compensation) errors: angle rms 0.3412 max 0.6107 deg | offset rms 125.7 max 219.2 um
+18:30:11  run logged: run_20261101_183011_as_200dps_scan.csv (1079 frames)
+18:30:11  AS IS 200 deg/s + scan: stopped
+
+### LIVE align 200 deg/s + scan
+18:30:11  it0: angle  -0.5846 deg  x   -49.05 px  width 486.4 px  gonio  -0.0258  z  11.9397
+18:30:13  it1: angle  -0.2154 deg  x    +3.16 px  width 486.4 px  gonio  -0.3994  z  12.1834
+18:30:14  it2: angle  -0.0770 deg  x    +1.03 px  width 486.2 px  gonio  -0.5370  z  12.3213
+18:30:15  it3: angle  -0.0256 deg  x    -0.14 px  width 486.4 px  gonio  -0.5862  z  12.3703
+18:30:16  it4: angle  -0.0070 deg  x    -0.00 px  width 486.3 px  gonio  -0.6026  z  12.3856
+18:30:16  aligned in 4 it, 4.3 s: angle -0.0070 deg, x -0.00 px
+18:30:16  LIVE align: rotation 200.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:30:37  LIVE align ended after 21.2 s, 650 frames (30.6/s), rotation at 4215.9 deg
+18:30:37  LIVE align errors: angle rms 0.4521 max 1.8073 deg | offset rms 86.0 max 328.6 um
+18:30:37  run logged: run_20261101_183037_live_200dps_scan.csv (650 frames)
+18:30:37  LIVE align 200 deg/s + scan: stopped
+
+### kayEi 200 deg/s + scan
+18:30:38  kayEi: rotation 200.0 deg/s, leads gonio 72 / Z 58 ms (velocity-shaped), scan 5.0..45.0 mm at 1.0 mm/s, residual learning on
+18:31:03  kayEi ended after 25.6 s, 1090 frames (42.6/s); tracker 1220 ticks, 1191 gonio cmds, worst gap 35 ms, 40 slow syncs ignored, peak speeds 4.00 deg/s / 8.15 mm/s; trim gonio -0.0317 deg z +1.1 um; residual (Fourier 1..4, 983 updates): gonio 0.2222/0.0071/0.0051/0.0046 deg, Z 42.7/8.6/6.9/1.9 um
+18:31:03  kayEi clock: 91 syncs, correction rms 14.44 deg, max 137.77 deg, 19 above 1 deg, rtt median 10.7 ms
+18:31:03  kayEi errors: angle rms 0.1931 max 1.4947 deg | offset rms 67.9 max 181.7 um
+18:31:03  run logged: run_20261101_183103_kayei_200dps_scan.csv (1090 frames)
+18:31:03  kayEi 200 deg/s + scan: stopped
+
+### AS IS 360 deg/s
+18:31:04  it0: angle  +0.8210 deg  x    -4.22 px  width 480.6 px  gonio  -0.5555  z  12.2925
+18:31:05  it1: angle  +0.3020 deg  x    -7.21 px  width 480.9 px  gonio  -0.0309  z  11.7488
+18:31:06  it2: angle  +0.1028 deg  x    +1.48 px  width 480.9 px  gonio  +0.1621  z  11.5359
+18:31:07  it3: angle  -0.6921 deg  x    +0.54 px  width 480.9 px  gonio  +0.2278  z  11.4663
+18:31:08  it4: angle  +0.8730 deg  x    +1.09 px  width 481.2 px  gonio  -0.2145  z  11.9231
+18:31:09  it5: angle  -0.0821 deg  x    +3.93 px  width 481.0 px  gonio  +0.3434  z  11.3488
+18:31:10  it6: angle  -0.0267 deg  x    -0.44 px  width 481.0 px  gonio  +0.2909  z  11.4094
+18:31:11  it7: angle  -0.0095 deg  x    +2.95 px  width 481.0 px  gonio  +0.2739  z  11.4191
+18:31:12  not converged after 8 iterations: angle -0.0099 deg, x +0.01 px
+18:31:12  aligned in 8 it, 8.2 s: angle -0.0099 deg, x +0.01 px
+18:31:12  AS IS (no compensation): rotation 360.0 deg/s
+18:31:29  AS IS (no compensation) ended after 17.3 s, 741 frames (42.7/s), rotation at 6050.8 deg
+18:31:29  AS IS (no compensation) errors: angle rms 0.4877 max 0.7708 deg | offset rms 224.8 max 369.4 um
+18:31:29  run logged: run_20261101_183129_as_360dps.csv (741 frames)
+18:31:29  AS IS 360 deg/s: stopped
+
+### LIVE align 360 deg/s
+18:31:30  it0: angle  -0.2469 deg  x  +124.54 px  width 478.4 px  gonio  +0.2739  z  11.4256
+18:31:31  it1: angle  -0.0802 deg  x    -0.68 px  width 478.5 px  gonio  +0.1161  z  11.8663
+18:31:32  it2: angle  -0.0303 deg  x    +1.05 px  width 478.3 px  gonio  +0.0648  z  11.9159
+18:31:33  it3: angle  -0.0104 deg  x    +0.37 px  width 478.6 px  gonio  +0.0455  z  11.9381
+18:31:33  aligned in 3 it, 3.2 s: angle -0.0104 deg, x +0.37 px
+18:31:33  LIVE align: rotation 360.0 deg/s
+18:31:55  LIVE align ended after 22.3 s, 692 frames (31.0/s), rotation at 8056.5 deg
+18:31:55  LIVE align errors: angle rms 0.3770 max 1.7974 deg | offset rms 108.4 max 320.7 um
+18:31:55  run logged: run_20261101_183155_live_360dps.csv (692 frames)
+18:31:55  LIVE align 360 deg/s: stopped
+
+### kayEi 360 deg/s
+18:31:57  kayEi: rotation 360.0 deg/s, leads gonio 112 / Z 72 ms (velocity-shaped), residual learning on
+18:32:21  kayEi ended after 25.5 s, 1091 frames (42.7/s); tracker 1222 ticks, 1187 gonio cmds, worst gap 34 ms, 52 slow syncs ignored, peak speeds 4.00 deg/s / 3.47 mm/s; trim gonio -0.0222 deg z -14.4 um; residual (Fourier 1..4, 988 updates): gonio 0.2576/0.0064/0.0129/0.0076 deg, Z 56.9/4.4/9.7/13.8 um
+18:32:21  kayEi clock: 90 syncs, correction rms 25.50 deg, max 240.69 deg, 40 above 1 deg, rtt median 13.0 ms
+18:32:21  kayEi errors: angle rms 0.2454 max 1.4835 deg | offset rms 58.0 max 138.4 um
+18:32:21  run logged: run_20261101_183221_kayei_360dps.csv (1091 frames)
+18:32:21  kayEi 360 deg/s: stopped
+
+### AS IS 360 deg/s + scan
+18:32:22  it0: angle  +0.0082 deg  x   -25.15 px  width 478.9 px  gonio  -0.0331  z  12.1663
+18:32:23  it1: angle  +0.0094 deg  x    -0.58 px  width 479.6 px  gonio  -0.0331  z  12.1097
+18:32:23  aligned in 1 it, 0.7 s: angle +0.0094 deg, x -0.58 px
+18:32:23  AS IS (no compensation): rotation 360.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:32:48  AS IS (no compensation) ended after 24.8 s, 1074 frames (43.3/s), rotation at 8885.2 deg
+18:32:48  AS IS (no compensation) errors: angle rms 0.3323 max 0.5954 deg | offset rms 218.6 max 372.1 um
+18:32:48  run logged: run_20261101_183248_as_360dps_scan.csv (1074 frames)
+18:32:48  AS IS 360 deg/s + scan: stopped
+
+### LIVE align 360 deg/s + scan
+18:32:48  it0: angle  +0.2500 deg  x    -7.95 px  width 483.3 px  gonio  -0.0331  z  12.1097
+18:32:49  it1: angle  +0.0911 deg  x    -4.82 px  width 483.3 px  gonio  +0.1266  z  11.9422
+18:32:50  it2: angle  +0.0373 deg  x    -0.84 px  width 483.3 px  gonio  +0.1848  z  11.8763
+18:32:51  it3: angle  +0.0101 deg  x    -0.38 px  width 483.4 px  gonio  +0.2086  z  11.8516
+18:32:51  aligned in 3 it, 3.2 s: angle +0.0101 deg, x -0.38 px
+18:32:52  LIVE align: rotation 360.0 deg/s, scan 5.0..45.0 mm at 1.0 mm/s
+18:33:13  LIVE align ended after 21.9 s, 671 frames (30.7/s), rotation at 7849.2 deg
+18:33:13  LIVE align errors: angle rms 0.4324 max 1.9823 deg | offset rms 258.2 max 1077.2 um
+18:33:13  run logged: run_20261101_183313_live_360dps_scan.csv (671 frames)
+18:33:13  LIVE align 360 deg/s + scan: ERROR fiber lost from the image
+
+### kayEi 360 deg/s + scan
+18:33:15  kayEi: rotation 360.0 deg/s, leads gonio 112 / Z 72 ms (velocity-shaped), scan 5.0..45.0 mm at 1.0 mm/s, residual learning on
+18:33:39  kayEi ended after 25.5 s, 1083 frames (42.5/s); tracker 1209 ticks, 1185 gonio cmds, worst gap 35 ms, 45 slow syncs ignored, peak speeds 4.00 deg/s / 3.20 mm/s; trim gonio -0.0392 deg z -0.8 um; residual (Fourier 1..4, 1011 updates): gonio 0.2891/0.0079/0.0115/0.0030 deg, Z 66.2/12.1/2.9/2.1 um
+18:33:39  kayEi clock: 90 syncs, correction rms 25.87 deg, max 242.91 deg, 40 above 1 deg, rtt median 12.0 ms
+18:33:39  kayEi errors: angle rms 0.2219 max 1.8346 deg | offset rms 77.8 max 214.5 um
+18:33:39  run logged: run_20261101_183339_kayei_360dps_scan.csv (1083 frames)
+18:33:39  kayEi 360 deg/s + scan: stopped
+sweep done
