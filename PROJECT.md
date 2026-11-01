@@ -207,7 +207,19 @@ needs filtered re-syncs, and that the feedback gain must scale with frame rate. 
 tilted fiber: 0.03 deg / 20-50 um up to 100 deg/s; goniometer-limited (4 deg/s) above.
 Pushed to github.com/mwysmolek/kayEi_fiber_align.
 
-## Next session (2026-11-01): different fibers, glass capillary
+## Session 2026-11-01 (summary)
+
+Sample 2: an opaque black rod, 1.106 mm, backlit (silhouette). Morning: Hydra power-cycled,
+the goniometer's LOWER LIMIT SWITCH turned out dead (homing ground into the end stop twice;
+truth found by stepping with the camera as reference; `home_all` now uses the upper switch
+only); both drives tripped once at their first move after power-up (`move_abs` re-powers).
+Silhouette measurement added to `fiber_align.measure` (POLARITY, bounded dark run, local
+background, MAD clipping; a lamp reflection on the rod flank needed the last one). Rod: tilt
+0.44 deg, ecc. 0.49 mm, sine residual 0.003 deg / 2 um (clean chuck grip). 30-run comparison:
+kayEi 0.008-0.043 deg / 6-45 um over 20-360 deg/s with and without scan, no mechanical
+limit reached; feedback 0.035-0.29 deg. Docs 7.7.
+
+## Next session: more samples (thin fibers, glass capillary)
 
 The plan is to put other samples in the chuck (thinner fibers, a glass capillary) and see
 what the measurement and kayEi achieve. Per sample, in this order (each step ~1-5 min):

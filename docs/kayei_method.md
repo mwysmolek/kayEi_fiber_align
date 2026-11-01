@@ -710,6 +710,7 @@ Timestamps below are from files, the GUI log and git; the person's own time is t
 |---|---|---|---|
 | 2026-10-20 | ~21:50-23:06 (~1.3 h) | chose the goal, ran the admin network commands, verified each step | found the Hydra on the network (ARP capture), drove goniometer + rotation, homing, dynamics, camera discovery and live view, `hydra.py`, `PROJECT.md` |
 | 2026-10-30 | ~18:30-23:20 (~5 h) | installed the PI software suite, connected the two stages, swapped in a new camera and lens and focused it, named the axes, confirmed moves were safe, pressed the GUI buttons for the as-is / live-align tests, stress-tested extremes (and faulted the drive twice) | PI stages via pipython, found and fixed the swapped stage parameter sets, 4-axis test, found the fiber, edge-fit measurement, calibration, alignment at 6 angles, the GUI, live tracking (feedback), recording, home/reset, drive-fault handling, log |
+| 2026-11-01 | 10:00-13:00 (~3 h) | installed the rod, built the backlight (three iterations), hand-turned the goniometer to centre, stopped two runaway homings, said when the light was final | restored camera IP and homed after the power cycle, found the dead lower switch by stepping with the camera as reference, drive-trip guard, silhouette measurement (three fixes), diameter, 5-position map, 30-run comparison, this section |
 | 2026-10-31 evening | 19:50-22:15 (~2.4 h) | removed the wire, re-clamped the fiber off-centre and tilted, changed the illumination, two messages ("took off the wire and changed the illumination", "and induced extra angle") | new exposure, re-identification of the frame delay, 5-position map of the tilted fiber, found the stop-and-go actuator response and the Hydra parser limit, velocity-shaped streaming, Fourier residual learner, rotation-clock filter, offset feedback, live-align gain fix, second 30-run comparison, demo movies, sections 5c, 6.7, 7.3d-f |
 | 2026-10-31 | 15:20-18:00 (~2.7 h) | plugged in the USB hub, created the GitHub repository, two short answers (hardware safe; fiber not touched) | latency and wobble identification, goniometer and Z dynamics, kayEi design and implementation (model, clock, tracker, residual learning), two Hydra firmware traps, 30-run comparison sweep, fiber diameter, 3D/4D wobble map, demo movies, this document |
 
@@ -725,6 +726,117 @@ Timestamps below are from files, the GUI log and git; the person's own time is t
   10-31 five, 10-31 evening two.
 - Everything the agent measured is in this repository with its script and raw data; the
   numbers in this document were not edited by hand.
+
+## 7.7 Second sample: a dark 1.1 mm rod in silhouette (2026-11-01)
+
+The person installed a different sample - an opaque black rod, 1.106 mm, so the same size
+as the glass fiber but with none of its optics - and changed the illumination to a lit
+panel behind it, so that the camera sees a black silhouette on white. Three things had to
+be dealt with before the first measurement, all of them worth recording.
+
+**The goniometer's lower limit switch is dead.** After the overnight power cycle the
+standard homing (`ncal` towards the lower switch) ran the stage into its mechanical end and
+kept pushing; the person stopped it by voice, twice. Truth was then established without
+`ncal`: the stage was turned to roughly centre by hand, zeroed there, and crept in 0.25 deg
+steps at 1 deg/s towards each end with the switch state and the camera angle read after
+every step. Downwards the camera followed the counter to -3.75 deg, delivered only 0.20 deg
+per 0.25 deg step from -4.0 deg (soft contact) and nothing at -5.0 deg (hard contact at
+image angle +4.78 deg) - with the switch inactive throughout. Upwards the switch fired at
++5.155 deg (image angle -5.26 deg). With the switch-to-switch range of 10.33 deg measured on
+2026-10-20, the lower switch should sit 0.3 deg beyond where the stage now stops; it never
+reports. The zero is now derived from the upper switch alone (`Hydra.home_all`,
+`GONIO_HALF_RANGE`), the lower soft limit stays 0.2 deg off the dead end, and the person's
+hand-set centre turned out to be 0.03 deg from the true one. Coming off the switch costs
+0.13 deg of backlash (counter zero reads -0.22 deg in the camera instead of -0.09), the same
+backlash that limited the learner in 7.3f.
+
+**Drives trip at their first move after a power cycle.** Both the goniometer and the
+rotation stage switched themselves off (status 0x100) once, at the first commanded move
+after power-up, and ran normally after being re-powered. `Hydra.move_abs` now re-powers a
+tripped drive once and counts it; the characterisation script raises instead of waiting
+forever when the rotation does not move.
+
+**Silhouette measurement.** The band fit of section 3 assumed a fiber brighter than its
+surroundings (rims, glow). For the silhouette it mirrors the column profile
+(`fiber_align.POLARITY`, auto-detected per band), picks the dark run that is bounded by
+background on both sides (the dark corners of the lamp spot also count as "dark" and reach
+the image border), takes the background level from the columns next to the rod (a lamp spot
+is not flat), and clips bad bands with a MAD-based scale, because a specular reflection of
+the lamp along one flank of the rod cut into 3-4 neighbouring bands at once and a
+standard-deviation scale let them through (fit residual 1.67 px; 0.13 px after). Exposure
+2 ms (`EXPOSURE_MS`): background 190, rod 4, noise per frame 0.0002 deg / 0.007 px, width
+52.7 px. The first silhouette attempt without these three measures reported a 12.7 px
+"fiber" (the glint) or nothing.
+
+**Diameter and scale** (`fiber_diameter.py`, `kayei_data/fiber_diameter_rod_20261101.csv`,
+`docs/figures/fiber_diameter_rod_20261101.png`): 48.9 px/mm = 20.45 um/px as before, rod
+diameter **1.106 +/- 0.004 mm** over three scan positions and two exposures; the
+silhouette of this rod and the glowing rims of yesterday's glass fiber (1.114 mm) agree on
+the scale to 0.05 %.
+
+**Uncontrolled motion** (`fiber_wobble_map.py`, `kayei_data/wobble_map_rod_20261101.csv`,
+`docs/figures/wobble_{2d,3d}_rod_20261101.png`, `wobble_4d_rod_20261101.mp4`):
+
+| scan [mm] | angle amplitude [deg] | offset amplitude [um] | sine residual |
+|---|---|---|---|
+| 5 | 0.538 | 460 | 0.004 deg / 3 um |
+| 15 | 0.491 | 376 | 0.003 / 2 |
+| 25 | 0.457 | 300 | 0.003 / 2 |
+| 35 | 0.383 | 233 | 0.002 / 2 |
+| 45 | 0.339 | 176 | 0.002 / 1 |
+
+Axis vs rotation axis: eccentricity at the chuck (-116, +477) um, tilt 0.441 deg, straight
+to 4-8 um. The sine residual is 5-8x smaller than with the glass fiber in the same chuck
+(0.018 deg / 15 um at scan 25, 5c): the chuck grips a round opaque rod cleanly, the
+transparent fiber's measured "shape" was mostly its optics. The goniometer rate this wobble
+needs is 0.46 x 2 pi x turns/s: 2.9 deg/s at 360 deg/s, inside the 4 deg/s limit at every
+speed for the first time with a wobble of this size.
+
+**Comparison, 30 runs** (`kayei_sweep.py`, evaluated after the first turn and 2 s,
+`kayei_data/eval_rod_20261101.txt`, `docs/figures/kayei_comparison_rod.png`):
+
+| Mode | Rotation | Scan | Turns evaluated | Angle rms / max [deg] | Offset rms / max [um] |
+|---|---|---|---|---|---|
+| as is | 20 deg/s | no | 3 | 0.5518 / 0.877 | 318.4 / 506 |
+| live align | 20 deg/s | no | 2 | 0.0365 / 0.083 | 16.5 / 61 |
+| kayEi | 20 deg/s | no | 3 | 0.0084 / 0.032 | 6.1 / 22 |
+| as is | 20 deg/s | yes | 2 | 0.2601 / 0.529 | 138.0 / 266 |
+| live align | 20 deg/s | yes | 2 | 0.0345 / 0.076 | 17.4 / 73 |
+| kayEi | 20 deg/s | yes | 3 | 0.0078 / 0.029 | 11.8 / 39 |
+| as is | 50 deg/s | no | 4 | 0.2606 / 0.450 | 161.3 / 257 |
+| live align | 50 deg/s | no | 4 | 0.0663 / 0.134 | 16.1 / 56 |
+| kayEi | 50 deg/s | no | 4 | 0.0200 / 0.064 | 14.5 / 46 |
+| as is | 50 deg/s | yes | 4 | 0.3683 / 0.601 | 234.2 / 385 |
+| live align | 50 deg/s | yes | 4 | 0.0736 / 0.151 | 21.8 / 81 |
+| kayEi | 50 deg/s | yes | 4 | 0.0174 / 0.050 | 12.4 / 46 |
+| as is | 100 deg/s | no | 7 | 0.3707 / 0.622 | 154.5 / 268 |
+| live align | 100 deg/s | no | 6 | 0.1162 / 0.206 | 21.6 / 61 |
+| kayEi | 100 deg/s | no | 7 | 0.0320 / 0.127 | 13.6 / 48 |
+| as is | 100 deg/s | yes | 7 | 0.4132 / 0.671 | 212.9 / 349 |
+| live align | 100 deg/s | yes | 7 | 0.1400 / 0.298 | 30.8 / 121 |
+| kayEi | 100 deg/s | yes | 6 | 0.0259 / 0.068 | 14.8 / 70 |
+| as is | 200 deg/s | no | 13 | 0.3025 / 0.524 | 131.0 / 210 |
+| live align | 200 deg/s | no | 13 | 0.2048 / 0.344 | 44.4 / 108 |
+| kayEi | 200 deg/s | no | 13 | 0.0276 / 0.087 | 16.3 / 56 |
+| as is | 200 deg/s | yes | 14 | 0.3952 / 0.650 | 226.4 / 361 |
+| live align | 200 deg/s | yes | 13 | 0.2509 / 0.462 | 65.4 / 209 |
+| kayEi | 200 deg/s | yes | 13 | 0.0297 / 0.108 | 19.0 / 70 |
+| as is | 360 deg/s | no | 24 | 0.2446 / 0.395 | 136.3 / 229 |
+| live align | 360 deg/s | no | 23 | 0.2846 / 0.460 | 88.2 / 226 |
+| kayEi | 360 deg/s | no | 24 | 0.0344 / 0.123 | 37.3 / 123 |
+| as is | 360 deg/s | yes | 23 | 0.2567 / 0.435 | 173.1 / 296 |
+| live align | 360 deg/s | yes | 8 | 0.2949 / 0.451 | 811.2 / 2434 |
+| kayEi | 360 deg/s | yes | 23 | 0.0428 / 0.140 | 45.1 / 137 |
+
+Reading the table: kayEi holds **0.008-0.043 deg and 6-45 um over the whole 20-360 deg/s
+range**, with and without scanning, on a 0.46 deg / 300 um wobble - 95-98 % removed at
+every speed, and for the first time no speed at which the mechanics give out. Feedback
+("live align") is 4x worse at 20 deg/s and 7-10x worse from 100 deg/s on, and still falls
+over at 360 deg/s with scanning (Z out of range). Compared with yesterday's glass fiber
+(7.3f) the gain is two-fold: a wobble a third as large and a clean chuck grip (sine residual
+0.003 deg), and the goniometer never asked to exceed 2.9 deg/s. The growth of the kayEi
+error with speed (0.008 -> 0.043 deg, 6 -> 45 um) is the stage ripple and backlash of 6.7
+and 7.3e scaling with the stage rate, as expected.
 
 ## 8. Experiment log
 
@@ -755,6 +867,10 @@ Timestamps below are from files, the GUI log and git; the person's own time is t
 | 2026-10-31 ev. | learner wind-up, Fourier learner, clock filter, Z feedback | `kayei_data/run_20261031_20[5]*`, `run_20261031_21[01]*`, `ticks_*`, `syncs_*` | bin table +/-0.7 deg -> 0.16 deg; Fourier + filters 0.031 deg / 31 um at 100 deg/s |
 | 2026-10-31 ev. | Z feedback gain A/B/A, 9 runs at 100 deg/s | `kayei_data/run_20261031_214[5-8]*`, `fb_ab_20261031.log` | 47.0 / 43.4 / 45.5 um for gain 0 / 0.4 / 0.2 |
 | 2026-10-31 ev. | demo movies, tilted fiber, 100 deg/s + scan | `kayei_record.py`, `kayei_data/demo_20261031_214849_*.mp4` | as is 1.31 deg -> live align diverges -> kayEi 0.044 deg / 76 um |
+| 2026-11-01 | goniometer switch search (camera as reference) | this document, 7.7 | lower switch dead; upper at +5.155; centre within 0.03 deg of hand-set |
+| 2026-11-01 | rod diameter / image scale (silhouette) | `fiber_diameter.py`, `kayei_data/fiber_diameter_rod_20261101.csv` | 1.106 +/- 0.004 mm, 20.45 um/px |
+| 2026-11-01 | rod 5-position map | `fiber_wobble_map.py`, `kayei_data/wobble_map_rod_20261101.csv` | tilt 0.441 deg, ecc. (-116, +477) um, sine residual 0.003 deg / 2 um |
+| 2026-11-01 | comparison sweep, rod (30 runs) | `kayei_sweep.py`, `kayei_data/eval_rod_20261101.txt`, `sweep_20261101_rod.log` | see 7.7 |
 | 2026-10-31 ev. | second comparison sweep, tilted fiber (30 runs) | `kayei_sweep.py`, `kayei_data/eval_evening_list.txt`, `sweep_20261031_evening.log`, `live_rerun_20261031.log` | kayEi 0.03 deg / 20-50 um to 100 deg/s; goniometer-limited from 200 deg/s (7.3f) |
 | 2026-10-31 | kayEi goniometer lead sweep | `kayei_data/tracker_test.py`, `kayei_data/gonio_tracker.csv` | 0.013-0.017 deg at 200-360 deg/s |
 
