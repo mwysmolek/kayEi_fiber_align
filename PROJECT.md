@@ -212,7 +212,9 @@ Pushed to github.com/mwysmolek/kayEi_fiber_align.
 The plan is to put other samples in the chuck (thinner fibers, a glass capillary) and see
 what the measurement and kayEi achieve. Per sample, in this order (each step ~1-5 min):
 
-1. **Start-up**: Hydra power-cycled? -> GUI **Home all Hydra**. Camera power-cycled? ->
+1. **Start-up**: Hydra power-cycled? -> GUI **Home all Hydra** (since 2026-11-01 the goniometer homes on
+   its UPPER switch only - the lower switch is dead, the stage hits its end ~0.3 deg before it;
+   never run `ncal` on axis 1). Camera power-cycled? ->
    `python gige_forceip.py 00:06:BE:11:70:BA 172.20.5.20`. PI hub plugged in.
    `C:\dev\hydra\.venv\Scripts\python gui.py`, **Ref. PI stages**, **Calibrate**.
 2. **Exposure / detection check** (illumination or sample changed):

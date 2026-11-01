@@ -11,6 +11,7 @@ import socket
 import sys
 import time
 
+GONIO_HALF_RANGE = 5.165   # deg: half the switch-to-switch travel (2026-10-20: 10.33 deg)
 PORT = 400
 AXES = {"goniometer": 1, "rotation": 2}
 TEST_STEP = 1.0  # in the axis' configured unit (usually degrees for these stages)
@@ -131,14 +132,18 @@ class Hydra:
             if not self.powered(ax):
                 self.init(ax)
                 time.sleep(2)
-        self.calibrate(gonio); time.sleep(0.2); self.wait(gonio)
+        # Goniometer: UPPER switch only (nrm). The lower switch stopped working on 2026-11-01:
+        # the stage reaches its mechanical end ~0.3 deg before the switch fires, so ncal grinds
+        # against the end stop and loses steps. Zero = upper switch - half of the switch-to-switch
+        # range measured on 2026-10-20 (10.33 deg); lower limit kept 0.2 deg off the dead end.
         self.range_measure(gonio); time.sleep(0.2); self.wait(gonio)
-        lo, hi = map(float, self.limits(gonio).split())
-        self.move_abs(gonio, (lo + hi) / 2)
         self.find_index(rot); time.sleep(0.3); self.wait(rot)
         self.set_position(rot, 0)
-        self.wait(gonio)
-        self.set_position(gonio, 0)  # 0 = centre, limits shift to +/- half range
+        v0 = self.velocity(gonio); self.set_velocity(gonio, 1.0)
+        self.move_rel(gonio, -GONIO_HALF_RANGE); self.wait(gonio)
+        self.set_velocity(gonio, v0)
+        self.set_position(gonio, 0)
+        self.set_limits(gonio, -GONIO_HALF_RANGE + 0.45, GONIO_HALF_RANGE - 0.15)
 
     def close(self):
         self.sock.close()
