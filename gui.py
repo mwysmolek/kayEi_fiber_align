@@ -631,7 +631,12 @@ def draw_chart(hist, now, w, cal):
 
 
 def text(img, s, org, scale=0.6, color=(255, 255, 255)):
-    cv2.putText(img, s, org, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), 4, cv2.LINE_AA)
+    """readable on any background: a dark translucent box behind the line instead of the thick
+    black outline, which on a white backlit image looked like a second, offset black text"""
+    (tw, th), base = cv2.getTextSize(s, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)
+    x, y = org; x0, y0, x1, y1 = max(0, x - 6), max(0, y - th - 6), min(img.shape[1], x + tw + 6), min(img.shape[0], y + base + 4)
+    roi = img[y0:y1, x0:x1]
+    cv2.addWeighted(roi, 0.35, np.zeros_like(roi), 0.65, 0, dst=roi)
     cv2.putText(img, s, org, cv2.FONT_HERSHEY_SIMPLEX, scale, color, 1, cv2.LINE_AA)
 
 

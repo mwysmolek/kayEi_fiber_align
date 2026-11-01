@@ -22,14 +22,17 @@ TOL_PX = 1.0       # px, fiber centre vs image centre
 MAX_ITER = 8
 BAND = 30          # rows per band for edge finding
 ROBUST = True      # sigma-clip the bands (False = plain least squares over all bands)
-PX_PER_MM = 425.4  # image scale, measured with Z steps (fiber_diameter.py / 2026-11-01 edge test):
-                   # Olympus Plan N 4x on the extension tube = 2.351 um/px; EO 6 mm lens was 48.9 (20.45 um/px)
-OPTICS = "Olympus Plan N 4x on extension tube (2026-11-01)"
+PX_PER_MM = 152.1  # image scale, measured with Z steps. Olympus Plan N 4x on the SHORT extension tube
+                   # (2026-11-01 19:30) = 6.573 um/px, field 9.5 x 7.1 mm; long tube was 425.4 (2.351 um/px);
+                   # EO 6 mm lens 48.9 (20.45 um/px)
+OPTICS = "Olympus Plan N 4x on short extension tube (2026-11-01 evening)"
 EDGE_ONLY = False  # True: only one fiber edge is in the frame (microscope objective): track that single
                    # transition per band; "x" is then the edge position relative to the image centre, width = nan
 POLARITY = "auto"  # "bright": fiber brighter than background (glowing / bright rims), "dark": silhouette
                    # (opaque fiber in front of a backlight), "auto": per band, whichever contrast is larger
-EXPOSURE_MS = 20.0 # Olympus 4x, backlit silhouette: 20 ms (background ~145). EO 6 mm lens, same light: 2 ms. History: 4 ms for the
+EXPOSURE_MS = 20.0 # Olympus 4x short tube, backlit: 20 ms clips the background white, which takes the dust
+                   # specks out of the edge thresholds (angle noise 0.0002 vs 0.003 deg unsaturated at 10 ms;
+                   # width reads 3 % narrow from blooming). Long tube: 20 ms; EO 6 mm lens, same light: 2 ms. History: 4 ms for the
                    # glowing 1.1 mm fiber (2026-10-31 evening), 20 ms for its dark-on-bright light before that
 
 
